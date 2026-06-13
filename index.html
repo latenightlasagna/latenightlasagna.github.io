@@ -11,6 +11,7 @@
             overflow: hidden; 
             background-color: #ffffff; 
             font-family: sans-serif;
+            touch-action: none; /* Prevents default mobile browser scrolling behavior */
         }
         canvas { 
             display: block; 
@@ -20,7 +21,7 @@
 <body>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
 
     <script>
         // 1. Scene Setup
@@ -37,21 +38,15 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap VRAM usage
         document.body.appendChild(renderer.domElement);
 
-        // 4. Interaction Constraints
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        
-        // Lowering this number INCREASES the easing/slide duration
-        // 0.05 is default, 0.015 gives a really long, buttery smooth glide
-        controls.dampingFactor = 0.015; 
-        
-        controls.enablePan = false;
-        
+        // 4. Interaction Constraints (Zero-Gravity Trackball)
+        const controls = new THREE.TrackballControls(camera, renderer.domElement);
+        controls.staticMoving = false; // Enables smooth sliding/momentum
+        controls.dynamicDampingFactor = 0.05; // Lower number = longer glide
+        controls.noPan = true; // Keeps the camera centered
+        controls.rotateSpeed = 2.0;
+        controls.zoomSpeed = 1.2;
         controls.minDistance = 20;
-        controls.maxDistance = 200; // Increased to allow zooming further out
-
-        // NOTE: All min/max Azimuth and Polar angles have been deleted!
-        // The user can now look around 360 degrees in all directions.
+        controls.maxDistance = 200; // Allows zooming further out
 
         // 5. Mobile Optimization Logic
         const IMAGE_COUNT = window.innerWidth < 768 ? 35 : 100;
@@ -63,9 +58,9 @@
         // IMPORTANT: Add your actual image filenames here. 
         // Use relative paths (./assets/...) so GitHub Pages finds them.
         const imagePaths = [
-            './assets/Edga_Styleframe_01.jpg',
-            './assets/Edga_Styleframe_01.jpg',
-            './assets/Edga_Styleframe_01.jpg'
+            './assets/img1.webp',
+            './assets/img2.webp',
+            './assets/img3.webp'
             // Add as many as you have!
         ];
 
@@ -78,15 +73,15 @@
 
             const material = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(material);
-
-
-            // Increased the multipliers from 100/80 to 200/150 for a wider spread
+            
+            // Random placement with wider spread
             sprite.position.x = (Math.random() - 0.5) * 200;
             sprite.position.y = (Math.random() - 0.5) * 200;
             sprite.position.z = (Math.random() - 0.5) * 150;
             
             sprite.scale.set(5, 5, 1);
             
+            // Assign initial velocity for natural floating
             sprite.userData.velocity = new THREE.Vector3(
                 (Math.random() - 0.5) * 0.02,
                 (Math.random() - 0.5) * 0.02,
@@ -106,6 +101,7 @@
 
         // Use 'pointerdown' instead of 'click' for better mobile touch support
         window.addEventListener('pointerdown', (event) => {
+            // Calculate mouse position in normalized device coordinates (-1 to +1)
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -128,16 +124,17 @@
         function animate() {
             requestAnimationFrame(animate);
 
+            // Apply natural floating velocity
             sprites.forEach(sprite => {
                 sprite.position.add(sprite.userData.velocity);
                 
-                // Soft boundaries to keep images in view
-                if (sprite.position.x > 60 || sprite.position.x < -60) sprite.userData.velocity.x *= -1;
-                if (sprite.position.y > 60 || sprite.position.y < -60) sprite.userData.velocity.y *= -1;
-                if (sprite.position.z > 50 || sprite.position.z < -50) sprite.userData.velocity.z *= -1;
+                // Wider soft boundaries to match the new spawn spread
+                if (sprite.position.x > 110 || sprite.position.x < -110) sprite.userData.velocity.x *= -1;
+                if (sprite.position.y > 110 || sprite.position.y < -110) sprite.userData.velocity.y *= -1;
+                if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
             });
 
-            controls.update();
+            controls.update(); // CRITICAL for Trackball easing
             renderer.render(scene, camera);
         }
 
