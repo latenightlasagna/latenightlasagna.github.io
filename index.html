@@ -1,1 +1,143 @@
-<h1>Hello World oida!</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>My 3D Portfolio</title>
+    <style>
+        /* CSS Reset to ensure the 3D canvas fills the exact screen without scrollbars */
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #ffffff; 
+            font-family: sans-serif;
+        }
+        canvas { 
+            display: block; 
+        }
+    </style>
+</head>
+<body>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // 1. Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff); // White background
+
+        // 2. Camera Setup
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+
+        // 3. Renderer Setup (Viewport Optimization)
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap VRAM usage
+        document.body.appendChild(renderer.domElement);
+
+        // 4. Interaction Constraints
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enablePan = false;
+        
+        controls.minDistance = 20;
+        controls.maxDistance = 100;
+        controls.minAzimuthAngle = -Math.PI / 4; 
+        controls.maxAzimuthAngle = Math.PI / 4;  
+        controls.minPolarAngle = Math.PI / 3;    
+        controls.maxPolarAngle = Math.PI / 1.5;  
+
+        // 5. Mobile Optimization Logic
+        const IMAGE_COUNT = window.innerWidth < 768 ? 35 : 100;
+        const sprites = [];
+        
+        // 6. Texture Loader and Image Array
+        const textureLoader = new THREE.TextureLoader();
+        
+        // IMPORTANT: Add your actual image filenames here. 
+        // Use relative paths (./assets/...) so GitHub Pages finds them.
+        const imagePaths = [
+            './assets/img1.webp',
+            './assets/img2.webp',
+            './assets/img3.webp'
+            // Add as many as you have!
+        ];
+
+        // Generate the Floating Images
+        for (let i = 0; i < IMAGE_COUNT; i++) {
+            
+            // Cycle through your image array even if you have fewer images than IMAGE_COUNT
+            const imagePath = imagePaths[i % imagePaths.length];
+            const texture = textureLoader.load(imagePath);
+
+            const material = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(material);
+            
+            // Random placement
+            sprite.position.x = (Math.random() - 0.5) * 100;
+            sprite.position.y = (Math.random() - 0.5) * 100;
+            sprite.position.z = (Math.random() - 0.5) * 80;
+            
+            sprite.scale.set(5, 5, 1);
+            
+            sprite.userData.velocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 0.02,
+                (Math.random() - 0.5) * 0.02,
+                (Math.random() - 0.5) * 0.02
+            );
+
+            // Link to individual project sites
+            sprite.userData.link = "./project-" + i + ".html";
+
+            scene.add(sprite);
+            sprites.push(sprite);
+        }
+
+        // 7. Click Detection (Raycaster)
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Use 'pointerdown' instead of 'click' for better mobile touch support
+        window.addEventListener('pointerdown', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(sprites);
+
+            if (intersects.length > 0) {
+                window.location.href = intersects[0].object.userData.link;
+            }
+        });
+
+        // 8. Handle Window Resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 9. Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            sprites.forEach(sprite => {
+                sprite.position.add(sprite.userData.velocity);
+                
+                // Soft boundaries to keep images in view
+                if (sprite.position.x > 60 || sprite.position.x < -60) sprite.userData.velocity.x *= -1;
+                if (sprite.position.y > 60 || sprite.position.y < -60) sprite.userData.velocity.y *= -1;
+                if (sprite.position.z > 50 || sprite.position.z < -50) sprite.userData.velocity.z *= -1;
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
