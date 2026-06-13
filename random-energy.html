@@ -119,4 +119,177 @@
             margin-bottom: 40px;
         }
 
-        .project-title
+        .project-title {
+            font-size: 22px;
+            font-weight: 500;
+            margin: 0 0 5px 0;
+        }
+
+        .project-category {
+            font-size: 12px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            margin: 0;
+        }
+
+        /* Right Column: Large Feature Image */
+        .col-right {
+            width: 45%;
+        }
+
+        .col-right img {
+            width: 100%;
+            height: auto;
+            max-height: 70vh;
+            object-fit: cover;
+            display: block;
+            background-color: #f0f0f0;
+        }
+
+        /* --- Mobile Optimization --- */
+        @media (max-width: 768px) {
+            body { cursor: auto; } /* Restore default cursor on mobile */
+            .cursor { display: none; } /* Hide red dot on mobile */
+            
+            .top-nav { padding: 20px; justify-content: center; background: #ffffff; }
+            .nav-links { gap: 20px; flex-wrap: wrap; justify-content: center; }
+            .nav-links a { font-size: 11px; cursor: pointer; }
+            
+            .project-row { flex-direction: column; text-align: center; margin-bottom: 10vh; min-height: auto; }
+            .col-left { display: none; } /* Hide scattered thumbnails on small screens */
+            .col-center { width: 100%; padding: 0; margin-bottom: 40px; }
+            .col-right { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cursor"></div>
+
+    <nav class="top-nav">
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="creative-coding.html">Creative Coding</a></li>
+            <li><a href="random-energy.html">Random Energy</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+    </nav>
+
+    <div class="content-container">
+
+        <div class="project-row">
+            <div class="col-left">
+                <img src="./assets/img1.webp" class="scatter-img img-1 parallax" data-speed="0.1">
+                <img src="./assets/img2.webp" class="scatter-img img-2 parallax" data-speed="-0.15">
+                <img src="./assets/img3.webp" class="scatter-img img-3 parallax" data-speed="0.05">
+            </div>
+            <div class="col-center">
+                <p class="project-desc">An immersive journey through the legacy of Sheikh Zayed, created to celebrate his vision, values, and lasting cultural impact.</p>
+                <h2 class="project-title">Zayed Sustainability Prize</h2>
+                <p class="project-category">Immersive Installation</p>
+            </div>
+            <div class="col-right">
+                <img src="./assets/large1.webp" alt="Project 1 Large Image">
+            </div>
+        </div>
+
+        <div class="project-row">
+            <div class="col-left">
+                <img src="./assets/img1.webp" class="scatter-img img-1 parallax" data-speed="0.12">
+                <img src="./assets/img2.webp" class="scatter-img img-2 parallax" data-speed="-0.1">
+                <img src="./assets/img3.webp" class="scatter-img img-3 parallax" data-speed="0.08">
+            </div>
+            <div class="col-center">
+                <p class="project-desc">A decade of reign, celebrated in light, color, and history at the Royal Palace.</p>
+                <h2 class="project-title">10th Anniversary</h2>
+                <p class="project-category">Projection Mapping</p>
+            </div>
+            <div class="col-right">
+                <img src="./assets/large2.webp" alt="Project 2 Large Image">
+            </div>
+        </div>
+
+        <div class="project-row">
+            <div class="col-left">
+                <img src="./assets/img1.webp" class="scatter-img img-1 parallax" data-speed="0.15">
+                <img src="./assets/img2.webp" class="scatter-img img-2 parallax" data-speed="-0.2">
+                <img src="./assets/img3.webp" class="scatter-img img-3 parallax" data-speed="0.1">
+            </div>
+            <div class="col-center">
+                <p class="project-desc">Data-ism is an artistic installation that explores the narrowing gap between the natural and digital realms.</p>
+                <h2 class="project-title">Data-Ism</h2>
+                <p class="project-category">Immersive Installation</p>
+            </div>
+            <div class="col-right">
+                <img src="./assets/large3.webp" alt="Project 3 Large Image">
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
+
+    <script>
+        // 1. Initialize Smooth Scrolling (Lenis)
+        const lenis = new Lenis({
+            duration: 1.2, // Controls the "weight" and glide of the scroll
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
+            direction: 'vertical',
+            gestureDirection: 'vertical',
+            smooth: true,
+            mouseMultiplier: 1,
+            smoothTouch: false, // Leave false so mobile users get native touch scrolling
+            touchMultiplier: 2,
+        });
+
+        // 2. Parallax Logic for Scattered Thumbnails
+        const parallaxElements = document.querySelectorAll('.parallax');
+
+        lenis.on('scroll', (e) => {
+            parallaxElements.forEach(el => {
+                const speed = parseFloat(el.getAttribute('data-speed'));
+                // Move the image slightly based on scroll position and its unique speed
+                const yPos = e.scroll * speed;
+                el.style.transform = `translateY(${yPos}px)`;
+            });
+        });
+
+        // Loop engine for Lenis
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+
+
+        // 3. Custom Red Cursor Logic (Lerp physics for smooth trailing)
+        const cursor = document.querySelector('.cursor');
+        let mouseX = window.innerWidth / 2; 
+        let mouseY = window.innerHeight / 2;
+        let cursorX = mouseX;
+        let cursorY = mouseY;
+
+        // Update target mouse coordinates on move
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animateCursor() {
+            // Lerp formula: current = current + (target - current) * speed
+            // 0.15 is the speed. Lower = laggy/springy. Higher = snappy.
+            cursorX += (mouseX - cursorX) * 0.15;
+            cursorY += (mouseY - cursorY) * 0.15;
+            
+            cursor.style.left = cursorX + 'px';
+            cursor.style.top = cursorY + 'px';
+            
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+    </script>
+</body>
+</html>
