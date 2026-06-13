@@ -120,10 +120,12 @@
             bottom: 0;
             left: 0;
             width: 100vw;
-            /* MODIFICATION 1: Increased height from 33vh to 45vh so the canvas reaches higher up the screen */
-            height: 45vh; 
+            /* MODIFICATION 1: Expanded to 50vh to push the effect high up the page */
+            height: 50vh; 
             z-index: 1;
             display: block;
+            /* Prevents the invisible parts of the canvas from blocking user clicks on the form */
+            pointer-events: none; 
         }
 
         @media (max-width: 768px) {
@@ -144,3 +146,55 @@
             <li><a href="contact.html">Contact</a></li>
         </ul>
     </nav>
+
+    <div class="contact-container">
+        <h1>Drop a Message</h1>
+        <form action="#" method="POST">
+            <div class="form-group"><input type="text" name="name" placeholder="YOUR NAME" required></div>
+            <div class="form-group"><input type="email" name="email" placeholder="YOUR EMAIL" required></div>
+            <div class="form-group"><textarea name="message" placeholder="WHAT'S ON YOUR MIND?" required></textarea></div>
+            <button type="submit" class="submit-btn">Send Sequence</button>
+        </form>
+    </div>
+
+    <canvas id="ascii-canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('ascii-canvas');
+        
+        // FIX 1: Standard 2D context. Removed the alpha restriction that was crashing iOS/Safari.
+        const ctx = canvas.getContext('2d'); 
+
+        const journal = "the creative underground ";
+        const cols = 120; 
+        const rows = 50;  
+        const totalChars = cols * rows;
+        
+        const tiled = journal.repeat(Math.ceil(totalChars / journal.length)).substring(0, totalChars);
+        
+        // Stabilized the random offsets to ensure characters don't get completely swallowed by the math
+        const offsets = new Float32Array(totalChars);
+        for (let i = 0; i < totalChars; i++) {
+            offsets[i] = (Math.random() - 0.5) * 0.8; 
+        }
+
+        let frameCount = 0;
+        let charWidth, leading, startX, startY, dynamicSize;
+
+        function setupCanvas() {
+            canvas.width = window.innerWidth;
+            // Locks the internal resolution exactly to the CSS 50vh height
+            canvas.height = window.innerHeight * 0.50; 
+
+            dynamicSize = Math.max(8, (canvas.width / cols) * 1.65);
+            
+            // Temporarily set font just to measure 'A'
+            ctx.font = `${dynamicSize}px monospace`;
+            charWidth = ctx.measureText('A').width;
+            leading = dynamicSize * 1.2; 
+            
+            startX = (canvas.width - (cols * charWidth)) / 2;
+            
+            // MODIFICATION 2: Set to 0 so the text draws starting exactly at the very top edge of the canvas bounding box
+            startY = 0; 
+        }
