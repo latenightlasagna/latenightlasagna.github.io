@@ -114,7 +114,7 @@
 
         .submit-btn:hover { background-color: #333333; }
 
-        /* NEW: Native Canvas Container */
+        /* Native Canvas Container */
         #ascii-canvas {
             position: absolute;
             bottom: 0;
@@ -158,96 +158,49 @@
 
     <script>
         const canvas = document.getElementById('ascii-canvas');
-        const ctx = canvas.getContext('2d', { alpha: false }); // alpha: false optimizes rendering by ignoring transparency
+        
+        // MODIFICATION 1: Removed { alpha: false } to allow transparency
+        const ctx = canvas.getContext('2d'); 
 
         const journal = "the creative underground ";
         const cols = 120; 
         const rows = 50;  
         const totalChars = cols * rows;
         
-        // Fast string repeating
         const tiled = journal.repeat(Math.ceil(totalChars / journal.length)).substring(0, totalChars);
         
-        // Typed Array for maximum memory efficiency
         const offsets = new Float32Array(totalChars);
         for (let i = 0; i < totalChars; i++) {
-            offsets[i] = (Math.random() - 0.5) * 0.6; // Approximates random(-0.3, 0.3)
+            offsets[i] = (Math.random() - 0.5) * 0.6; 
         }
 
         let frameCount = 0;
         let charWidth, leading, startX, startY;
 
         function setupCanvas() {
-            // Set hardware pixel resolution to match CSS styling
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight * 0.33;
 
-            // Calculate dynamic text size
             let dynamicSize = Math.max(8, (canvas.width / cols) * 1.65);
             
-            // Apply font settings directly to context
             ctx.font = `${dynamicSize}px monospace`;
             ctx.textBaseline = "top";
 
-            // Pre-calculate spacing
             charWidth = ctx.measureText('A').width;
-            leading = dynamicSize * 1.2; // 1.2 is standard line height
+            leading = dynamicSize * 1.2; 
             
             startX = (canvas.width - (cols * charWidth)) / 2;
             startY = (canvas.height - (rows * leading)) / 2;
         }
 
         window.addEventListener('resize', setupCanvas);
-        setupCanvas(); // Initial setup
+        setupCanvas(); 
 
         function draw() {
-            // Clear background (black)
+            // MODIFICATION 2: Clear the frame with transparency instead of a solid black block
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // MODIFICATION 3: Set text color to pure black
             ctx.fillStyle = "#000000";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Set text color (white)
-            ctx.fillStyle = "#ffffff";
-            
-            let t = frameCount * 0.02; 
-            
-            for (let r = 0; r < rows; r++) {
-                let lineStr = "";
-                
-                for (let c = 0; c < cols; c++) {
-                    let idx = r * cols + c;
-                    let ch = tiled[idx];
-                    
-                    let x = c * 0.06; 
-                    let y = r * 0.12; 
-                    
-                    let big = Math.sin(x * 0.3 + t * 0.5) * Math.cos(y * 0.5 - t * 0.4) +
-                              0.7 * Math.sin(x * 0.2 - t * 0.3) * Math.cos(y * 0.3 + t * 0.35) +
-                              0.5 * Math.sin(x * 0.15 + y * 0.2 + t * 0.2);
-                              
-                    let med = Math.sin(x * 1.2 + t * 0.7) * Math.cos(y * 0.8 - t * 0.5) +
-                              0.6 * Math.cos(x * 0.7 - y * 0.9 + t * 0.6);
-                              
-                    let small = Math.sin(x * 3 + t * 1.2) * Math.cos(y * 2.5 - t * 0.9) +
-                                0.5 * Math.sin(x * 4 - y * 3 + t * 1.5);
-                                
-                    let n = (big * 0.5) + (med * 0.3) + (small * 0.2) + offsets[idx];
-                    
-                    lineStr += (n > 0.35) ? ch : " ";
-                }
-                
-                ctx.fillText(lineStr, startX, startY + (r * leading));
-            }
-
-            frameCount++;
-            
-            // Throttling to ~30 FPS to save CPU battery on mobile
-            setTimeout(() => {
-                requestAnimationFrame(draw);
-            }, 1000 / 30);
-        }
-
-        // Start the engine
-        draw();
-    </script>
-</body>
-</html>
+            let t = frameCount * 0.0
