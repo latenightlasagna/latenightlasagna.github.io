@@ -159,8 +159,8 @@
     <script>
         const canvas = document.getElementById('ascii-canvas');
         
-        // MODIFICATION 1: Removed { alpha: false } to allow transparency
-        const ctx = canvas.getContext('2d'); 
+        // Re-enabled alpha: false for maximum performance
+        const ctx = canvas.getContext('2d', { alpha: false }); 
 
         const journal = "the creative underground ";
         const cols = 120; 
@@ -197,10 +197,51 @@
         setupCanvas(); 
 
         function draw() {
-            // MODIFICATION 2: Clear the frame with transparency instead of a solid black block
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Explicitly fill the background with solid white
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // MODIFICATION 3: Set text color to pure black
+            // Set text color to pure black
             ctx.fillStyle = "#000000";
             
-            let t = frameCount * 0.0
+            let t = frameCount * 0.02; 
+            
+            for (let r = 0; r < rows; r++) {
+                let lineStr = "";
+
+                for (let c = 0; c < cols; c++) {
+                    let idx = r * cols + c;
+                    let ch = tiled[idx];
+                    
+                    let x = c * 0.06; 
+                    let y = r * 0.12; 
+                    
+                    let big = Math.sin(x * 0.3 + t * 0.5) * Math.cos(y * 0.5 - t * 0.4) +
+                              0.7 * Math.sin(x * 0.2 - t * 0.3) * Math.cos(y * 0.3 + t * 0.35) +
+                              0.5 * Math.sin(x * 0.15 + y * 0.2 + t * 0.2);
+                              
+                    let med = Math.sin(x * 1.2 + t * 0.7) * Math.cos(y * 0.8 - t * 0.5) +
+                              0.6 * Math.cos(x * 0.7 - y * 0.9 + t * 0.6);
+                              
+                    let small = Math.sin(x * 3 + t * 1.2) * Math.cos(y * 2.5 - t * 0.9) +
+                                0.5 * Math.sin(x * 4 - y * 3 + t * 1.5);
+                                
+                    let n = (big * 0.5) + (med * 0.3) + (small * 0.2) + offsets[idx];
+                    
+                    lineStr += (n > 0.35) ? ch : " ";
+                }
+                
+                ctx.fillText(lineStr, startX, startY + (r * leading));
+            }
+            
+            frameCount++;
+            
+            setTimeout(() => {
+                requestAnimationFrame(draw);
+            }, 1000 / 30);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
