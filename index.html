@@ -42,15 +42,10 @@
             font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 2px;
-            transition: opacity 0.3s ease; 
+            /* Removed the opacity transition so the text stays solid black during the glitch */
         }
 
-        .top-nav a:hover { opacity: 0.4; }
-
         /* --- Scroll-to-Fly Layout --- */
-        
-        /* THE FIX: Reduced from 300vh to 180vh. 
-           This means the user has to scroll much less distance to trigger the transition. */
         .hero-scroll-track {
             height: 180vh; 
             position: relative;
@@ -155,11 +150,56 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
 
     <script>
-        // --- THE FIX: Locomotive-Style Smooth Scrolling ---
-        // By removing 'duration' and 'easing', and injecting 'lerp', 
-        // we create that heavy, continuous momentum that Locomotive is famous for.
+        // --- TEXT SCRAMBLE HOVER EFFECT ---
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+        const navLinks = document.querySelectorAll('.top-nav a');
+
+        navLinks.forEach(link => {
+            // Store the original word so the script knows what to resolve back to
+            link.dataset.value = link.textContent.toUpperCase();
+            
+            // Scope the interval variable so rapid hovering doesn't break the animation
+            let interval = null; 
+
+            link.addEventListener('mouseenter', event => {
+                let iteration = 0;
+                
+                // Clear any existing animation on this specific link
+                clearInterval(interval);
+
+                interval = setInterval(() => {
+                    event.target.textContent = event.target.textContent
+                        .split("")
+                        .map((letter, index) => {
+                            // If the iteration has passed this letter's index, show the real letter
+                            if (index < iteration) {
+                                return event.target.dataset.value[index];
+                            }
+                            // Keep empty spaces as spaces (don't glitch them)
+                            if (event.target.dataset.value[index] === " ") {
+                                return " ";
+                            }
+                            // Otherwise, return a random character from our string above
+                            return letters[Math.floor(Math.random() * letters.length)];
+                        })
+                        .join("");
+
+                    // Stop the loop once the whole word is revealed
+                    if (iteration >= event.target.dataset.value.length) {
+                        clearInterval(interval);
+                    }
+
+                    // The fraction controls the speed. (1 / 3) means it takes 3 frames to lock in one letter.
+                    iteration += 1 / 3; 
+                }, 30); // 30ms per frame
+            });
+        });
+    </script>
+
+    <script>
+        // --- Smooth Scrolling ---
         const lenis = new Lenis({
-            lerp: 0.08, // Lower number = heavier, slower momentum. 0.08 is the sweet spot.
+            lerp: 0.08, 
             smoothWheel: true
         });
         function raf(time) {
@@ -265,8 +305,6 @@
             const currentScroll = Math.max(0, Math.min(window.scrollY, maxScroll));
             const scrollProgress = currentScroll / maxScroll; 
 
-            // THE FIX: Increased the push distance from 150 to 180. 
-            // Combined with the shorter track, this makes the images fly by significantly faster.
             particleGroup.position.z = scrollProgress * 180;
 
             controls.update(); 
