@@ -11,20 +11,19 @@
             padding: 0;
             background-color: #ffffff; 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-            /* overscroll-behavior prevents the elastic "bounce" on Mac trackpads */
             overscroll-behavior: none; 
         }
 
-        /* --- TASK 1: New Minimalist Header Layout --- */
+        /* --- Minimalist Header Layout --- */
         .top-nav {
-            position: fixed; /* Fixed so it stays over everything while scrolling */
+            position: fixed; 
             top: 0;
             left: 0;
             width: 100%;
             padding: 30px 50px;
             box-sizing: border-box;
             display: flex;
-            justify-content: space-between; /* Spreads the text out like the reference image */
+            justify-content: space-between; 
             align-items: center;
             z-index: 100; 
             pointer-events: none; 
@@ -32,7 +31,7 @@
 
         .nav-col {
             display: flex;
-            gap: 60px; /* Wide gap between items in the same column */
+            gap: 60px; 
             pointer-events: auto; 
         }
 
@@ -48,15 +47,15 @@
 
         .top-nav a:hover { opacity: 0.4; }
 
-        /* --- TASK 2: Scroll-to-Fly Layout --- */
+        /* --- Scroll-to-Fly Layout --- */
         
-        /* The invisible track that creates scrollable height for the flythrough */
+        /* THE FIX: Reduced from 300vh to 180vh. 
+           This means the user has to scroll much less distance to trigger the transition. */
         .hero-scroll-track {
-            height: 300vh; 
+            height: 180vh; 
             position: relative;
         }
 
-        /* The container that pins the 3D canvas to the screen while scrolling */
         .hero-sticky-container {
             position: sticky;
             top: 0;
@@ -72,7 +71,7 @@
             height: 100%;
         }
 
-        /* --- TASK 2: The Next Section (Video Containers) --- */
+        /* --- The Next Section --- */
         .video-section {
             position: relative;
             z-index: 10;
@@ -93,7 +92,7 @@
 
         .video-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* 2 Columns */
+            grid-template-columns: 1fr 1fr; 
             gap: 40px;
             width: 100%;
             max-width: 1400px;
@@ -103,7 +102,7 @@
         .video-placeholder {
             width: 100%;
             aspect-ratio: 16 / 9;
-            background-color: #e0e0e0; /* Light grey placeholder for the video */
+            background-color: #e0e0e0; 
             border-radius: 4px;
             display: flex;
             align-items: center;
@@ -114,11 +113,10 @@
             text-transform: uppercase;
         }
 
-        /* Mobile Optimization */
         @media (max-width: 768px) {
             .top-nav { padding: 20px; flex-direction: column; gap: 20px; }
             .nav-col { gap: 20px; justify-content: center; }
-            .video-grid { grid-template-columns: 1fr; /* Stacks videos on mobile */ }
+            .video-grid { grid-template-columns: 1fr; }
             .section-headline { font-size: 2rem; }
         }
     </style>
@@ -152,24 +150,23 @@
         </div>
     </section>
 
-
     <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
 
     <script>
-        // --- Initialize Smooth Scrolling ---
+        // --- THE FIX: Locomotive-Style Smooth Scrolling ---
+        // By removing 'duration' and 'easing', and injecting 'lerp', 
+        // we create that heavy, continuous momentum that Locomotive is famous for.
         const lenis = new Lenis({
-            duration: 1.2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
-            smooth: true
+            lerp: 0.08, // Lower number = heavier, slower momentum. 0.08 is the sweet spot.
+            smoothWheel: true
         });
         function raf(time) {
             lenis.raf(time);
             requestAnimationFrame(raf);
         }
         requestAnimationFrame(raf);
-
 
         // --- Scene Setup ---
         const container = document.getElementById('webgl-container');
@@ -188,12 +185,9 @@
         controls.staticMoving = false; 
         controls.dynamicDampingFactor = 0.05; 
         controls.noPan = true; 
-        // CRITICAL CHANGE: Disable zoom in TrackballControls so the scroll wheel controls the page scroll instead!
         controls.noZoom = true; 
         controls.rotateSpeed = 2.0;
 
-        // --- The Sprite Group (The "Collection") ---
-        // We put all images inside this group so we can move the entire group towards the camera on scroll
         const particleGroup = new THREE.Group();
         scene.add(particleGroup);
 
@@ -214,10 +208,9 @@
             const material = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(material);
             
-            // Adjusted spawn boundaries so all images start in front of the camera (Z = 20)
             sprite.position.x = (Math.random() - 0.5) * 100;
             sprite.position.y = (Math.random() - 0.5) * 100;
-            sprite.position.z = (Math.random() * -100) + 10; // Spawns between Z=10 and Z=-90
+            sprite.position.z = (Math.random() * -100) + 10; 
             
             sprite.scale.set(5, 5, 1);
             
@@ -229,12 +222,10 @@
 
             sprite.userData.link = "./project-" + i + ".html";
 
-            // Add sprites to the GROUP, not the scene
             particleGroup.add(sprite);
             sprites.push(sprite);
         }
 
-        // --- Click Detection (Raycaster) ---
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -245,29 +236,24 @@
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            // Check intersection against the children of the particle group
             const intersects = raycaster.intersectObjects(particleGroup.children);
 
             if (intersects.length > 0) {
-                // COMMENTED OUT FOR DEVELOPMENT
                 // window.location.href = intersects[0].object.userData.link;
             }
         });
 
-        // --- Handle Window Resizing ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // --- Animation Loop & Flythrough Logic ---
         const scrollTrack = document.querySelector('.hero-scroll-track');
 
         function animate() {
             requestAnimationFrame(animate);
 
-            // 1. Natural Floating Animation
             sprites.forEach(sprite => {
                 sprite.position.add(sprite.userData.velocity);
                 if (sprite.position.x > 60 || sprite.position.x < -60) sprite.userData.velocity.x *= -1;
@@ -275,15 +261,13 @@
                 if (sprite.position.z > 20 || sprite.position.z < -100) sprite.userData.velocity.z *= -1;
             });
 
-            // 2. Scroll-to-Fly Logic
-            // Calculate how far down the user has scrolled in the pinned hero track
             const maxScroll = scrollTrack.offsetHeight - window.innerHeight;
             const currentScroll = Math.max(0, Math.min(window.scrollY, maxScroll));
-            const scrollProgress = currentScroll / maxScroll; // Value between 0.0 and 1.0
+            const scrollProgress = currentScroll / maxScroll; 
 
-            // Push the entire image group forward by 150 units as the user scrolls
-            // Because the camera is at Z=20, pushing the group to Z=150 forces everything to fly past the camera!
-            particleGroup.position.z = scrollProgress * 150;
+            // THE FIX: Increased the push distance from 150 to 180. 
+            // Combined with the shorter track, this makes the images fly by significantly faster.
+            particleGroup.position.z = scrollProgress * 180;
 
             controls.update(); 
             renderer.render(scene, camera);
