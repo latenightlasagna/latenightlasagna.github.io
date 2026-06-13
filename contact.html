@@ -5,15 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Contact | My Portfolio</title>
     <style>
-        body { 
+        /* --- Core Layout --- */
+        html, body { 
             margin: 0; 
+            padding: 0;
+            width: 100%;
+            height: 100%; /* Explicitly locks the page height */
             overflow: hidden; 
             background-color: #ffffff; 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             touch-action: none; 
         }
 
-        /* Header Navigation */
+        /* --- Header Navigation --- */
         .top-nav {
             position: absolute; 
             top: 0;
@@ -23,7 +27,7 @@
             box-sizing: border-box;
             display: flex;
             justify-content: flex-end; 
-            z-index: 10; 
+            z-index: 100; /* Ensures nav is always on top */
             pointer-events: none; 
         }
 
@@ -48,15 +52,15 @@
 
         .nav-links a:hover { opacity: 0.4; }
 
-        /* Contact Form */
+        /* --- Contact Form --- */
         .contact-container {
             position: absolute;
-            top: 12vh; 
+            top: 15vh; 
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
             max-width: 450px;
-            z-index: 5;
+            z-index: 50;
             padding: 20px;
             box-sizing: border-box;
         }
@@ -65,16 +69,19 @@
             font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 2px;
-            margin-bottom: 40px;
+            margin-bottom: 50px;
             font-weight: 600;
             text-align: center;
         }
 
         .form-group {
-            margin-bottom: 30px;
+            margin-bottom: 35px;
             position: relative;
         }
 
+        /* THE FIX: Forcing input and textarea to be 100% identical. 
+           We use 'appearance: none' to strip away Apple/Windows default styling.
+        */
         .form-group input, 
         .form-group textarea {
             width: 100%;
@@ -82,9 +89,16 @@
             border: none;
             border-bottom: 1px solid #d0d0d0;
             padding: 10px 0;
+            margin: 0;
             font-family: inherit;
             font-size: 14px;
+            line-height: normal;
             outline: none;
+            box-shadow: none;
+            box-sizing: border-box;
+            border-radius: 0;
+            appearance: none; 
+            -webkit-appearance: none;
             transition: border-color 0.3s ease;
         }
 
@@ -95,7 +109,10 @@
 
         .form-group textarea {
             resize: none;
-            height: 60px; 
+            /* Matches the mathematical height of the inputs to make it look identical */
+            height: 38px; 
+            overflow: hidden;
+            vertical-align: top;
         }
 
         .submit-btn {
@@ -114,25 +131,24 @@
 
         .submit-btn:hover { background-color: #333333; }
 
-        /* Native Canvas Container */
+        /* --- Native Canvas Container --- */
         #ascii-canvas {
-            position: absolute;
+            position: fixed; /* THE FIX: Locks canvas strictly to the viewport glass */
             bottom: 0;
             left: 0;
             width: 100vw;
-            /* MODIFICATION 1: Expanded to 50vh to push the effect high up the page */
             height: 50vh; 
             z-index: 1;
             display: block;
-            /* Prevents the invisible parts of the canvas from blocking user clicks on the form */
-            pointer-events: none; 
+            pointer-events: none; /* Prevents canvas from blocking clicks to the form */
         }
 
+        /* Mobile Adjustments */
         @media (max-width: 768px) {
             .top-nav { padding: 20px; justify-content: center; }
             .nav-links { gap: 20px; flex-wrap: wrap; justify-content: center; }
             .nav-links a { font-size: 11px; }
-            .contact-container { top: 16vh; }
+            .contact-container { top: 18vh; }
         }
     </style>
 </head>
@@ -161,8 +177,6 @@
 
     <script>
         const canvas = document.getElementById('ascii-canvas');
-        
-        // FIX 1: Standard 2D context. Removed the alpha restriction that was crashing iOS/Safari.
         const ctx = canvas.getContext('2d'); 
 
         const journal = "the creative underground ";
@@ -172,7 +186,6 @@
         
         const tiled = journal.repeat(Math.ceil(totalChars / journal.length)).substring(0, totalChars);
         
-        // Stabilized the random offsets to ensure characters don't get completely swallowed by the math
         const offsets = new Float32Array(totalChars);
         for (let i = 0; i < totalChars; i++) {
             offsets[i] = (Math.random() - 0.5) * 0.8; 
@@ -183,18 +196,64 @@
 
         function setupCanvas() {
             canvas.width = window.innerWidth;
-            // Locks the internal resolution exactly to the CSS 50vh height
             canvas.height = window.innerHeight * 0.50; 
 
-            dynamicSize = Math.max(8, (canvas.width / cols) * 1.65);
+            // THE FIX: Math.floor() guarantees a whole integer so the browser's font engine doesn't crash
+            dynamicSize = Math.floor(Math.max(10, (canvas.width / cols) * 1.65));
             
-            // Temporarily set font just to measure 'A'
             ctx.font = `${dynamicSize}px monospace`;
             charWidth = ctx.measureText('A').width;
-            leading = dynamicSize * 1.2; 
+            
+            // THE FIX: Floor the leading as well
+            leading = Math.floor(dynamicSize * 1.2); 
             
             startX = (canvas.width - (cols * charWidth)) / 2;
-            
-            // MODIFICATION 2: Set to 0 so the text draws starting exactly at the very top edge of the canvas bounding box
             startY = 0; 
         }
+
+        window.addEventListener('resize', setupCanvas);
+        setupCanvas(); 
+
+        function draw() {
+            // Render pure white background to wipe the previous frame cleanly
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Explicitly set text style every frame just in case context state drops
+            ctx.fillStyle = "#000000";
+            ctx.font = `${dynamicSize}px monospace`; 
+            ctx.textBaseline = "top";
+            
+            let t = frameCount * 0.02; 
+            
+            for (let r = 0; r < rows; r++) {
+                let lineStr = "";
+
+                for (let c = 0; c < cols; c++) {
+                    let idx = r * cols + c;
+                    let x = c * 0.08; 
+                    let y = r * 0.15; 
+                    
+                    let wave1 = Math.sin(x * 0.83 + t * 0.7) * Math.cos(y * 0.91 - t * 0.5);
+                    let wave2 = Math.sin(x * 1.73 - y * 1.33 + t * 1.1) * Math.cos(x * 0.41 + t * 0.8);
+                    let chaos = Math.sin((x + y) * 1.5 + t * 1.2); 
+                    
+                    let n = (wave1 * 0.4) + (wave2 * 0.3) + (chaos * 0.3) + offsets[idx];
+                    
+                    // Slightly lowered threshold to ensure plenty of glitch text draws
+                    lineStr += (n > 0.15) ? tiled[idx] : " ";
+                }
+                
+                ctx.fillText(lineStr, startX, startY + (r * leading));
+            }
+            
+            frameCount++;
+            
+            // Swapped to standard unthrottled requestAnimationFrame for maximum reliability
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
