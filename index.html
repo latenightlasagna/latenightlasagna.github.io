@@ -18,7 +18,7 @@
             display: block; 
         }
 
-        /* --- NEW: Header Navigation Styles --- */
+        /* --- Header Navigation Styles --- */
         .top-nav {
             position: absolute; /* Floats over the canvas */
             top: 0;
@@ -164,7 +164,9 @@
             const intersects = raycaster.intersectObjects(sprites);
 
             if (intersects.length > 0) {
-                window.location.href = intersects[0].object.userData.link;
+                // COMMENTED OUT FOR DEVELOPMENT
+                // Delete the two forward slashes below when you are ready to link pages again
+                // window.location.href = intersects[0].object.userData.link;
             }
         });
 
