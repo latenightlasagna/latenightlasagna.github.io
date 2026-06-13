@@ -181,9 +181,9 @@
 
         <div class="project-row">
             <div class="col-left">
-                <img src="./assets/img1.webp" class="scatter-img img-1 parallax" data-speed="0.1">
-                <img src="./assets/img2.webp" class="scatter-img img-2 parallax" data-speed="-0.15">
-                <img src="./assets/img3.webp" class="scatter-img img-3 parallax" data-speed="0.05">
+                <img src="./assets/Edga_Styleframe_01.jpg" class="scatter-img img-1 parallax" data-speed="0.1">
+                <img src="./assets/Edga_Styleframe_01.jpg" class="scatter-img img-2 parallax" data-speed="-0.15">
+                <img src="./assets/Edga_Styleframe_01.jpg" class="scatter-img img-3 parallax" data-speed="0.05">
             </div>
             <div class="col-center">
                 <p class="project-desc">An immersive journey through the legacy of Sheikh Zayed, created to celebrate his vision, values, and lasting cultural impact.</p>
@@ -280,8 +280,8 @@
         function animateCursor() {
             // Lerp formula: current = current + (target - current) * speed
             // 0.15 is the speed. Lower = laggy/springy. Higher = snappy.
-            cursorX += (mouseX - cursorX) * 0.15;
-            cursorY += (mouseY - cursorY) * 0.15;
+            cursorX += (mouseX - cursorX) * 0.5;
+            cursorY += (mouseY - cursorY) * 0.5;
             
             cursor.style.left = cursorX + 'px';
             cursor.style.top = cursorY + 'px';
