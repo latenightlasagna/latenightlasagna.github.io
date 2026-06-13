@@ -40,15 +40,18 @@
         // 4. Interaction Constraints
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
+        
+        // Lowering this number INCREASES the easing/slide duration
+        // 0.05 is default, 0.015 gives a really long, buttery smooth glide
+        controls.dampingFactor = 0.015; 
+        
         controls.enablePan = false;
         
         controls.minDistance = 20;
-        controls.maxDistance = 100;
-        controls.minAzimuthAngle = -Math.PI / 4; 
-        controls.maxAzimuthAngle = Math.PI / 4;  
-        controls.minPolarAngle = Math.PI / 3;    
-        controls.maxPolarAngle = Math.PI / 1.5;  
+        controls.maxDistance = 200; // Increased to allow zooming further out
+
+        // NOTE: All min/max Azimuth and Polar angles have been deleted!
+        // The user can now look around 360 degrees in all directions.
 
         // 5. Mobile Optimization Logic
         const IMAGE_COUNT = window.innerWidth < 768 ? 35 : 100;
