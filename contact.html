@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Contact | My Portfolio</title>
     <style>
-        /* --- Core Layout --- */
+        /* Core Layout */
         html, body { 
             margin: 0; 
             padding: 0;
             width: 100%;
-            height: 100%; /* Explicitly locks the page height */
+            height: 100%; 
             overflow: hidden; 
             background-color: #ffffff; 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             touch-action: none; 
         }
 
-        /* --- Header Navigation --- */
+        /* Header Navigation */
         .top-nav {
             position: absolute; 
             top: 0;
@@ -27,7 +27,7 @@
             box-sizing: border-box;
             display: flex;
             justify-content: flex-end; 
-            z-index: 100; /* Ensures nav is always on top */
+            z-index: 100; 
             pointer-events: none; 
         }
 
@@ -52,7 +52,7 @@
 
         .nav-links a:hover { opacity: 0.4; }
 
-        /* --- Contact Form --- */
+        /* Contact Form */
         .contact-container {
             position: absolute;
             top: 15vh; 
@@ -79,9 +79,6 @@
             position: relative;
         }
 
-        /* THE FIX: Forcing input and textarea to be 100% identical. 
-           We use 'appearance: none' to strip away Apple/Windows default styling.
-        */
         .form-group input, 
         .form-group textarea {
             width: 100%;
@@ -109,7 +106,6 @@
 
         .form-group textarea {
             resize: none;
-            /* Matches the mathematical height of the inputs to make it look identical */
             height: 38px; 
             overflow: hidden;
             vertical-align: top;
@@ -131,19 +127,18 @@
 
         .submit-btn:hover { background-color: #333333; }
 
-        /* --- Native Canvas Container --- */
+        /* Native Canvas Container */
         #ascii-canvas {
-            position: fixed; /* THE FIX: Locks canvas strictly to the viewport glass */
+            position: fixed; 
             bottom: 0;
             left: 0;
             width: 100vw;
             height: 50vh; 
             z-index: 1;
             display: block;
-            pointer-events: none; /* Prevents canvas from blocking clicks to the form */
+            pointer-events: none; 
         }
 
-        /* Mobile Adjustments */
         @media (max-width: 768px) {
             .top-nav { padding: 20px; justify-content: center; }
             .nav-links { gap: 20px; flex-wrap: wrap; justify-content: center; }
@@ -180,76 +175,83 @@
         const ctx = canvas.getContext('2d'); 
 
         const journal = "the creative underground ";
-        const cols = 180; 
-        const rows = 50;  
-        const totalChars = cols * rows;
         
-        const tiled = journal.repeat(Math.ceil(totalChars / journal.length)).substring(0, totalChars);
-        
-        const offsets = new Float32Array(totalChars);
-        for (let i = 0; i < totalChars; i++) {
-            offsets[i] = (Math.random() - 0.5) * 1.5; 
-        }
-
+        // We declare these globally, but dynamically calculate them in setupCanvas()
+        let cols, rows, totalChars, tiled, offsets;
+        let charWidth, leading, fontSize;
         let frameCount = 0;
-        let charWidth, leading, startX, startY, dynamicSize;
 
         function setupCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight * 0.50; 
 
-            // THE FIX: Math.floor() guarantees a whole integer so the browser's font engine doesn't crash
-            dynamicSize = Math.floor(Math.max(10, (canvas.width / cols) * 1.65));
+            // FEATURE 1: FULL WIDTH RESPONSIVE GRID
+            // Choose a fixed font size (slightly smaller on mobile)
+            fontSize = window.innerWidth < 768 ? 10 : 13;
             
-            ctx.font = `${dynamicSize}px monospace`;
+            ctx.font = `${fontSize}px monospace`;
             charWidth = ctx.measureText('A').width;
+            leading = Math.floor(fontSize * 1.2); 
             
-            // THE FIX: Floor the leading as well
-            leading = Math.floor(dynamicSize * 1.2); 
-            
-            startX = (canvas.width - (cols * charWidth)) / 2;
-            startY = 0; 
+            // Mathematically divide the screen to find exactly how many columns fill the width
+            cols = Math.ceil(canvas.width / charWidth);
+            rows = Math.ceil(canvas.height / leading);
+            totalChars = cols * rows;
+
+            // Rebuild the strings and arrays to match the exact screen size
+            tiled = journal.repeat(Math.ceil(totalChars / journal.length)).substring(0, totalChars);
+            offsets = new Float32Array(totalChars);
+            for (let i = 0; i < totalChars; i++) {
+                offsets[i] = (Math.random() - 0.5) * 1.5; 
+            }
         }
 
         window.addEventListener('resize', setupCanvas);
         setupCanvas(); 
 
         function draw() {
-            // Render pure white background to wipe the previous frame cleanly
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Explicitly set text style every frame just in case context state drops
             ctx.fillStyle = "#000000";
-            ctx.font = `${dynamicSize}px monospace`; 
+            ctx.font = `${fontSize}px monospace`; 
             ctx.textBaseline = "top";
             
-            let t = frameCount * 0.02; 
+            let t = frameCount * 0.004; 
             
             for (let r = 0; r < rows; r++) {
                 let lineStr = "";
+                
+                // FEATURE 2: THE VERTICAL RAMP
+                // verticalFade is 0.0 at the top row, and 1.0 at the bottom row
+                let verticalFade = r / rows; 
+                
+                // The threshold drops as it goes down the screen.
+                // Top threshold = 0.8 (Requires high noise, sparse text)
+                // Bottom threshold = -0.1 (Accepts low noise, dense text)
+                let threshold = 0.8 - (verticalFade * 0.9);
 
                 for (let c = 0; c < cols; c++) {
                     let idx = r * cols + c;
+                    
                     let x = c * 0.12; 
                     let y = r * 0.20; 
                     
                     let wave1 = Math.sin(x * 0.83 + t * 0.7) * Math.cos(y * 0.91 - t * 0.5);
                     let wave2 = Math.sin(x * 1.73 - y * 1.33 + t * 1.1) * Math.cos(x * 0.41 + t * 0.8);
-                    let chaos = Math.sin((x + y) * 1.5 + t * 1.2); 
+                    let chaos = Math.sin((x * y) * 2.5 + t * 1.5); 
                     
-                    let n = (wave1 * 0.4) + (wave2 * 0.3) + (chaos * 0.3) + offsets[idx];
+                    let n = (wave1 * 0.3) + (wave2 * 0.3) + (chaos * 0.4) + offsets[idx];
                     
-                    // Slightly lowered threshold to ensure plenty of glitch text draws
-                    lineStr += (n > 0.15) ? tiled[idx] : " ";
+                    // We compare the noise against our new gradient threshold
+                    lineStr += (n > threshold) ? tiled[idx] : " ";
                 }
                 
-                ctx.fillText(lineStr, startX, startY + (r * leading));
+                // Because the grid is dynamically calculated, startX is simply 0 (absolute left edge)
+                ctx.fillText(lineStr, 0, r * leading);
             }
             
             frameCount++;
-            
-            // Swapped to standard unthrottled requestAnimationFrame for maximum reliability
             requestAnimationFrame(draw);
         }
 
