@@ -47,16 +47,14 @@
             font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 2px;
-            display: inline-block;
-            white-space: nowrap; /* Prevents text wrap layout bugs */
         }
 
         /* --- THE BULLETPROOF ALIGNMENT LOCK --- */
         .sync-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr; 
-            gap: 60px; 
-            width: 400px; 
+            /* Strict 50/50 split prevents the grid from expanding during the scramble */
+            grid-template-columns: 50% 50%; 
+            width: 440px; 
             pointer-events: auto;
         }
 
@@ -65,6 +63,9 @@
             flex-direction: column;
             align-items: flex-end;
             text-align: right;
+            /* Uses padding to create the center gap, ensuring the columns stay strictly 50% wide */
+            padding-right: 30px;
+            box-sizing: border-box;
         }
 
         .sync-col-right {
@@ -72,6 +73,8 @@
             flex-direction: column;
             align-items: flex-start;
             text-align: left;
+            padding-left: 30px;
+            box-sizing: border-box;
         }
 
         .top-nav .sync-grid { align-items: center; }
@@ -199,16 +202,14 @@
         }
 
         .footer-col a, .footer-col p, .sync-grid a, .sync-grid p {
-            /* FIX 1: max-content shrinks the hit-box perfectly to the text */
             display: inline-block;
-            width: max-content;
             color: #ffffff;
             text-decoration: none;
             font-size: 14px;
             margin-bottom: 8px;
             line-height: 1.5;
             text-transform: uppercase;
-            /* FIX 2: Prevents text expanding into a new line and violently breaking the layout */
+            /* Prevents text from wrapping to a new line and breaking layout */
             white-space: nowrap; 
             transition: opacity 0.3s ease;
         }
@@ -244,7 +245,6 @@
             color: #ffffff;
             text-decoration: none;
             text-transform: uppercase;
-            white-space: nowrap;
             transition: opacity 0.3s ease;
         }
         .legal-links a:hover { opacity: 0.5; }
@@ -254,9 +254,8 @@
             .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
             .nav-col { gap: 20px; justify-content: center !important; }
             
-            .sync-grid { width: 100%; gap: 20px; }
-            .top-nav .sync-grid { gap: 15px; }
-            .sync-col-left, .sync-col-right { align-items: center; text-align: center; }
+            .sync-grid { width: 100%; display: flex; justify-content: space-around; }
+            .sync-col-left, .sync-col-right { padding: 0; align-items: center; text-align: center; }
 
             .video-grid { grid-template-columns: 1fr; }
             .section-headline { font-size: 2rem; }
@@ -353,20 +352,27 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
 
     <script>
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+        // Removed wide characters (M, W, @, %) from the matrix to minimize visual jitter
+        const letters = "ABCDEFGHJKLNPRSTVXYZ0123456789#&*";
         const allLinks = document.querySelectorAll('.top-nav a, .site-footer a');
 
         allLinks.forEach(link => {
-            // Trim removes accidental spaces from the HTML formatting that could cause weird layout logic
             link.dataset.value = link.textContent.trim().toUpperCase();
             let interval = null; 
 
             link.addEventListener('mouseenter', () => {
+                
+                // BUGFIX: Locks the physical width of the link before it starts scrambling
+                // This ensures it never pushes against the CSS Grid and causes the page to bounce.
+                if (!link.style.width) {
+                    const rect = link.getBoundingClientRect();
+                    link.style.width = Math.ceil(rect.width) + 'px';
+                }
+
                 let iteration = 0;
                 clearInterval(interval);
 
                 interval = setInterval(() => {
-                    // FIX 3: Maps against the perfectly clean dataset in memory, rather than the mangled DOM string.
                     link.textContent = link.dataset.value
                         .split("")
                         .map((letter, index) => {
@@ -378,7 +384,6 @@
 
                     if (iteration >= link.dataset.value.length) {
                         clearInterval(interval);
-                        // Hard-reset at the very end to guarantee floating point math didn't skip the last letter
                         link.textContent = link.dataset.value; 
                     }
                     iteration += 1 / 3; 
