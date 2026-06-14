@@ -14,24 +14,20 @@
             overscroll-behavior: none; 
         }
 
-        /* --- UNIFIED GRID SYSTEM --- */
-        /* This guarantees the Header and Footer align pixel-perfectly */
-        .strict-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            width: 100%;
-        }
-        .grid-left { justify-self: start; }
-        .grid-center { justify-self: start; } /* Forces the middle column to lock to exactly 33.3% */
-        .grid-right { justify-self: end; text-align: right; }
-
-        /* --- Minimalist Header Layout --- */
+        /* --- Minimalist Header Layout (Upgraded to mathematically perfect Grid) --- */
         .top-nav {
             position: fixed; 
             top: 0;
             left: 0;
+            width: 100%;
             padding: 30px 50px;
             box-sizing: border-box;
+            
+            /* THE FIX: A 3-column grid locks the center perfectly to the middle of the screen */
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            
             z-index: 100; 
             pointer-events: none; 
             mix-blend-mode: difference;
@@ -39,9 +35,14 @@
 
         .nav-col {
             display: flex;
-            gap: 40px; 
+            gap: 60px; 
             pointer-events: auto; 
         }
+
+        /* Forces the columns to align to their respective edges */
+        .nav-col:nth-child(1) { justify-content: flex-start; }
+        .nav-col:nth-child(2) { justify-content: center; }
+        .nav-col:nth-child(3) { justify-content: flex-end; }
 
         .top-nav a {
             text-decoration: none;
@@ -115,7 +116,7 @@
             text-transform: uppercase;
         }
 
-        /* --- HIGH-END CINEMATIC FOOTER --- */
+        /* --- NEW: High-End Cinematic Footer --- */
         .site-footer {
             position: relative;
             z-index: 20; 
@@ -125,24 +126,21 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            /* Matches the header padding exactly */
+            padding: 0 50px;
+            box-sizing: border-box;
         }
 
-        /* Looping Video Background */
-        .footer-bg {
+        /* The Looping Video Background */
+        .footer-video-bg {
             position: absolute;
             top: 0; 
             left: 0; 
             width: 100%; 
             height: 100%;
-            background-color: #000;
-            z-index: 1;
-        }
-
-        .footer-bg video {
-            width: 100%;
-            height: 100%;
             object-fit: cover;
-            opacity: 0.45; /* Darkens the video so text is crisp */
+            opacity: 0.4; /* Darkens the video so text is readable */
+            z-index: 1;
         }
 
         .footer-content {
@@ -151,22 +149,28 @@
             display: flex;
             flex-direction: column;
             flex-grow: 1;
-            justify-content: flex-end; /* Pushes content down, leaving premium empty space above */
+            /* Pushes everything down to create premium negative space at the top */
+            justify-content: flex-end; 
+            padding-bottom: 30px; 
         }
 
-        /* Footer Info Grid */
-        .footer-grid {
-            padding: 0 50px; /* Matches Header horizontal padding perfectly */
-            border-top: 1px solid rgba(255, 255, 255, 0.4);
-            padding-top: 40px;
-            margin-bottom: 5vh;
-            box-sizing: border-box;
+        /* The Footer Grid (Mirrors the exact math of the Header) */
+        .footer-columns {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: start;
+            margin-bottom: 10vh; 
         }
 
         .footer-col {
             display: flex;
             flex-direction: column;
         }
+        
+        /* Mirrors the text alignment to the edges and center */
+        .footer-col:nth-child(1) { align-items: flex-start; text-align: left; }
+        .footer-col:nth-child(2) { align-items: center; text-align: center; }
+        .footer-col:nth-child(3) { align-items: flex-end; text-align: right; }
 
         .footer-col h4 {
             font-size: 10px;
@@ -192,26 +196,25 @@
 
         /* The Massive Bottom Name */
         .footer-massive-name {
-            font-size: 21.5vw; /* Tuned to sit edge-to-edge */
+            font-size: 21.5vw; /* Calibrated to span edge to edge nicely */
             font-weight: 500;
             line-height: 0.75;
-            letter-spacing: -4px;
+            letter-spacing: -0.02em;
             text-transform: uppercase;
-            padding: 0 50px;
-            margin-bottom: 3vh;
-            white-space: nowrap;
-            box-sizing: border-box;
+            text-align: center;
+            margin-bottom: 40px;
         }
 
-        /* The Bottom Legal Bar */
+        /* The very bottom legal bar */
         .footer-bottom {
-            padding: 20px 50px 30px 50px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            align-items: center;
-            box-sizing: border-box;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 20px;
         }
 
         .legal-links a {
@@ -219,39 +222,36 @@
             text-decoration: none;
             transition: opacity 0.3s ease;
         }
-        
         .legal-links a:hover { opacity: 0.5; }
 
         /* --- Mobile Optimization --- */
         @media (max-width: 768px) {
-            /* Breaks the strict grid on mobile to stack elements vertically */
-            .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; mix-blend-mode: normal; background: #fff;}
-            .top-nav a { color: #000; }
-            .nav-col { justify-content: center; }
-            
+            /* Switch back to flex stack on mobile for both header and footer */
+            .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+            .nav-col { gap: 20px; justify-content: center !important; }
             .video-grid { grid-template-columns: 1fr; }
             .section-headline { font-size: 2rem; }
             
-            .footer-grid { display: flex; flex-direction: column; gap: 40px; padding: 0 20px; border-top: none; }
-            .footer-col.grid-right { text-align: left; align-items: flex-start; }
-            .footer-massive-name { font-size: 24vw; letter-spacing: -2px; padding: 0 20px; margin-bottom: 20px;}
+            .site-footer { padding: 0 20px; }
+            .footer-columns { display: flex; flex-direction: column; gap: 50px; margin-bottom: 8vh; margin-top: 10vh; }
+            .footer-col { align-items: center !important; text-align: center !important; }
             
-            .footer-bottom { display: flex; flex-direction: column; gap: 15px; align-items: flex-start; padding: 20px; }
+            .footer-massive-name { font-size: 24vw; margin-bottom: 20px; }
+            .footer-bottom { flex-direction: column; gap: 15px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Updated Header using the new strict grid -->
-    <nav class="top-nav strict-grid">
-        <div class="nav-col grid-left">
+    <nav class="top-nav">
+        <div class="nav-col">
             <a href="/">SIMON</a>
         </div>
-        <div class="nav-col grid-center">
+        <div class="nav-col">
             <a href="archive.html">archive</a>
             <a href="contact.html">Contact</a>
         </div>
-        <div class="nav-col grid-right">
+        <div class="nav-col">
             <a href="random-energy.html">Random Energy</a>
         </div>
     </nav>
@@ -273,31 +273,29 @@
     <!-- The Cinematic Footer -->
     <footer class="site-footer">
         
-        <!-- Background Looping Video -->
-        <div class="footer-bg">
-            <video autoplay loop muted playsinline>
-                <!-- REPLACE THIS SRC WITH YOUR ACTUAL FOOTER VIDEO FILE -->
-                <source src="./assets/your-footer-loop.mp4" type="video/mp4">
-            </video>
-        </div>
+        <!-- THE NEW VIDEO BACKGROUND -->
+        <!-- Just replace the 'src' path with your actual video file! -->
+        <video class="footer-video-bg" autoplay loop muted playsinline>
+            <source src="./assets/footer-loop.mp4" type="video/mp4">
+        </video>
         
         <div class="footer-content">
             
-            <!-- Updated Footer Grid matching the Header Alignment -->
-            <div class="footer-grid strict-grid">
-                <div class="footer-col grid-left">
+            <!-- Mathematically Aligned 3-Column Grid -->
+            <div class="footer-columns">
+                <div class="footer-col">
                     <h4>SOCIALS</h4>
                     <a href="https://www.instagram.com/latenight.lasagna/" target="_blank">Instagram</a>
                     <a href="https://de.linkedin.com/in/moinsen" target="_blank">LinkedIn</a>
                     <a href="https://www.cgtrader.com/designers/latenight-lasagna" target="_blank">CGTrader</a>
                 </div>
                 
-                <div class="footer-col grid-center">
+                <div class="footer-col">
                     <h4>CONTACT</h4>
                     <a href="mailto:contact@simonhahn.de">contact@simonhahn.de</a>
                 </div>
                 
-                <div class="footer-col grid-right">
+                <div class="footer-col">
                     <h4>OFFICE</h4>
                     <p>Ungerstraße 12<br>04318 Leipzig<br>Germany</p>
                 </div>
@@ -305,11 +303,9 @@
 
             <div class="footer-massive-name">SIMON</div>
 
-            <div class="footer-bottom strict-grid">
-                <span class="grid-left">© 2026 SIMON HAHN</span>
-                
-                <div class="legal-links grid-right">
-                    <!-- Consolidated Privacy Policy Link -->
+            <div class="footer-bottom">
+                <span>© 2026 SIMON HAHN</span>
+                <div class="legal-links">
                     <a href="impressum.html">PRIVACY POLICY</a>
                 </div>
             </div>
@@ -385,7 +381,6 @@
         controls.noZoom = true; 
         controls.rotateSpeed = 2.0;
 
-        // --- The Image Cloud ---
         const particleGroup = new THREE.Group();
         scene.add(particleGroup);
 
@@ -433,7 +428,6 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // --- Auto-Scroll Logic ---
         const scrollTrack = document.querySelector('.hero-scroll-track');
         const targetSection = document.getElementById('work-section');
         let isAutoScrolling = false; 
