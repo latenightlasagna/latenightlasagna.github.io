@@ -14,15 +14,12 @@
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             color: #000000;
             cursor: none; 
-            /* THE FIX: Native CSS scroll snapping guarantees no wobble and no overscroll */
             scroll-snap-type: y mandatory;
             overscroll-behavior: none;
-            /* Hides the ugly native scrollbar for a cleaner look */
             scrollbar-width: none; 
         }
         body::-webkit-scrollbar { display: none; }
 
-        /* The invisible sections that drive the snapping */
         .snap-section {
             height: 100vh;
             width: 100%;
@@ -83,20 +80,17 @@
             left: 0;
             width: 100%;
             height: 100vh;
-            pointer-events: none; /* Lets the scroll wheel pass through to the snapping blocks */
+            pointer-events: none; 
             z-index: 10;
         }
 
         .archive-list {
             position: absolute;
-            /* Locks the top of the list exactly to the center of the screen */
             top: 50%; 
             left: 50px;
             display: flex;
             flex-direction: column;
-            /* TWEAK: Tightly packed list as requested */
             gap: 15px; 
-            /* The animation that physically slides the list up/down when you scroll */
             transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
             pointer-events: auto;
         }
@@ -112,8 +106,8 @@
             align-items: center;
             width: max-content;
             transform-origin: left center;
-            /* Smoothly fades and scales the text */
             transition: color 0.4s ease, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform, opacity; 
         }
 
         .archive-item .tag {
@@ -125,10 +119,8 @@
             transition: all 0.3s ease;
         }
 
-        /* The Active, Centered Text State */
         .archive-item.active-text {
             color: #000000; 
-            /* Pops the active item slightly to the right and scales it up! */
             transform: scale(1.05) translateX(20px); 
         }
 
@@ -167,7 +159,6 @@
             object-fit: cover;
             box-shadow: 0px 20px 40px rgba(0,0,0,0.1); 
             transform: translate(-50%, -50%) scale(1);
-            /* Animates both position and scaling dynamically */
             transition: top 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
                         left 0.6s cubic-bezier(0.25, 1, 0.5, 1),
                         transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
@@ -305,31 +296,80 @@
         const galleryGroups = document.querySelectorAll('.gallery-group');
         let currentIndex = -1;
 
-        // --- Init: Generate the Scroll Track dynamically ---
-        // This guarantees there is exactly one invisible 100vh block to snap to for every single project you add
         archiveItems.forEach(() => {
             const section = document.createElement('div');
             section.classList.add('snap-section');
             scrollTrack.appendChild(section);
         });
 
-        // --- Core Randomization Engine ---
+        // --- Core Randomization Engine with Collision Detection ---
         function randomizeImages(group) {
             const images = group.querySelectorAll('img');
             const isMobile = window.innerWidth < 768;
+            const listRect = archiveListContainer.getBoundingClientRect();
+            
+            // Array to store the X, Y, and Scale of images we have successfully placed
+            const placedImages = [];
             
             images.forEach((img, index) => {
-                // THE FIX: Strict bounding box. 
-                // Images spawn strictly between 35% and 85% width on desktop, avoiding the text list entirely!
                 const minX = isMobile ? 20 : 35; 
                 const spreadX = isMobile ? 60 : 50; 
                 
-                const randomLeft = minX + Math.random() * spreadX;
-                const randomTop = 15 + Math.random() * 70; // Between 15% and 85% height
+                let randomLeft, randomTop, randomScale, pxLeft, pxTop;
+                let isValid = false;
                 
-                // THE FIX: Random scale offset added as requested (between 0.8 and 1.2)
-                const randomScale = 0.8 + Math.random() * 0.4;
+                // Fail-safe limit: Try 100 times to find a safe spot, then just give up and place it.
+                let attempts = 0; 
+                
+                while (!isValid && attempts < 100) {
+                    randomLeft = minX + Math.random() * spreadX;
+                    randomTop = 15 + Math.random() * 70; 
+                    
+                    // NEW MORE EXTREME SCALE: Spawns between 0.85x and 1.65x
+                    randomScale = 0.85 + Math.random() * 0.8;
 
+                    // Convert percentages to pixels for math checks
+                    pxLeft = (randomLeft / 100) * window.innerWidth;
+                    pxTop = (randomTop / 100) * window.innerHeight;
+
+                    // 1. Check Collision against the Text List
+                    const isOverlappingList = 
+                        pxLeft < (listRect.right + 50) && 
+                        pxTop > (listRect.top - 50) && 
+                        pxTop < (listRect.bottom + 50);
+
+                    // 2. Check Collision against "Neighbors" (Previously placed images)
+                    let isOverlappingSibling = false;
+                    
+                    if (!isOverlappingList) {
+                        for (let sibling of placedImages) {
+                            // Pythagorean theorem to find the exact pixel distance between image centers
+                            const dx = pxLeft - sibling.x;
+                            const dy = pxTop - sibling.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            // Calculate a dynamic safe radius based on how big the images spawned
+                            const safeDistance = 180 * ((randomScale + sibling.scale) / 2);
+
+                            if (distance < safeDistance) {
+                                isOverlappingSibling = true;
+                                break; 
+                            }
+                        }
+                    }
+
+                    // If it clears both hurdles, mark as valid and exit the while-loop!
+                    if (!isOverlappingList && !isOverlappingSibling) {
+                        isValid = true;
+                    }
+                    
+                    attempts++;
+                }
+
+                // Log the final coordinates so the next image can avoid this one
+                placedImages.push({ x: pxLeft, y: pxTop, scale: randomScale });
+
+                // Apply to the DOM
                 img.style.left = `${randomLeft}%`;
                 img.style.top = `${randomTop}%`;
                 img.style.transform = `translate(-50%, -50%) scale(${randomScale})`;
@@ -339,20 +379,15 @@
 
         // --- Center-Screen Sync Engine ---
         function updateScroll() {
-            // Calculate which project is active based on native scroll position
             let newIndex = Math.round(window.scrollY / window.innerHeight);
-            
-            // Prevent going out of bounds
             newIndex = Math.max(0, Math.min(newIndex, archiveItems.length - 1));
 
             if (newIndex !== currentIndex) {
                 currentIndex = newIndex;
                 
-                // Reset all classes
                 archiveItems.forEach(i => i.classList.remove('active-text'));
                 galleryGroups.forEach(g => g.classList.remove('active'));
 
-                // Activate the new current project
                 const activeItem = archiveItems[currentIndex];
                 activeItem.classList.add('active-text');
                 
@@ -364,19 +399,15 @@
                     randomizeImages(targetGroup);
                 }
 
-                // THE FIX: Perfect Vertical Centering!
-                // Calculate the distance of the active item from the top of the list container,
-                // and translate the entire container UP by that exact amount.
                 const itemCenterY = activeItem.offsetTop + (activeItem.offsetHeight / 2);
                 archiveListContainer.style.transform = `translateY(-${itemCenterY}px)`;
             }
         }
 
-        // Listen for standard native scroll
         window.addEventListener('scroll', updateScroll);
         
-        // Force layout calculation on page load
-        updateScroll();
+        // Timeout ensures fonts are loaded before calculating collision bounding boxes
+        setTimeout(updateScroll, 100);
     </script>
 </body>
 </html>
