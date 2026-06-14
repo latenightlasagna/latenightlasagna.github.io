@@ -39,9 +39,8 @@
         }
 
         /* Forces the columns to align to their respective edges */
-        .nav-col:nth-child(1) { justify-content: flex-start; }
-        .nav-col:nth-child(2) { justify-content: center; }
-        .nav-col:nth-child(3) { justify-content: flex-end; }
+        .nav-col.left-col { justify-content: flex-start; }
+        .nav-col.right-col { justify-content: flex-end; }
 
         .top-nav a {
             text-decoration: none;
@@ -52,13 +51,24 @@
             letter-spacing: 2px;
         }
 
-        /* --- THE ALIGNMENT LOCK (Shared between Header and Footer) --- */
-        /* This forces the first item to have a fixed width of 90px so the second item always starts at the exact same vertical line */
+        /* --- THE BULLETPROOF ALIGNMENT LOCK --- */
+        /* This class is shared ONLY by the center element of the header and footer */
         .sync-grid {
             display: grid;
-            grid-template-columns: 90px max-content;
-            gap: 60px;
+            /* 130px fits 'ARCHIVE' + 'shop', forcing the second column to align perfectly */
+            grid-template-columns: 130px max-content; 
             text-align: left;
+            pointer-events: auto;
+        }
+
+        /* Header specific vertical alignment */
+        .top-nav .sync-grid {
+            align-items: center;
+        }
+
+        /* Footer specific vertical alignment */
+        .site-footer .sync-grid {
+            align-items: start;
         }
 
         /* --- Scroll-to-Fly Layout --- */
@@ -138,7 +148,6 @@
             box-sizing: border-box;
         }
 
-        /* The Looping Video Background */
         .footer-video-bg {
             position: absolute;
             top: 0; 
@@ -146,7 +155,7 @@
             width: 100%; 
             height: 100%;
             object-fit: cover;
-            opacity: 0.4; /* Darkens the video so text is readable */
+            opacity: 0.4; 
             z-index: 1;
         }
 
@@ -156,11 +165,11 @@
             display: flex;
             flex-direction: column;
             flex-grow: 1;
-            justify-content: flex-end; /* Pushes content down for premium negative space */
+            justify-content: flex-end; 
             padding-bottom: 30px; 
         }
 
-        /* The Footer Grid (Mirrors the Header Math) */
+        /* The Footer Grid Layout */
         .footer-columns {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
@@ -180,6 +189,7 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
+            text-align: left;
         }
 
         .footer-col h4, .footer-sub-col h4 {
@@ -190,7 +200,6 @@
             text-transform: uppercase;
         }
 
-        /* Specific override for the "shop" title from your mockup */
         .lowercase-title {
             text-transform: lowercase !important;
         }
@@ -244,13 +253,14 @@
             .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
             .nav-col { gap: 20px; justify-content: center !important; }
             .sync-grid { grid-template-columns: 1fr 1fr; gap: 30px; text-align: center; }
+            .top-nav .sync-grid { gap: 15px; }
             .video-grid { grid-template-columns: 1fr; }
             .section-headline { font-size: 2rem; }
             
             .site-footer { padding: 0 20px; }
             .footer-columns { display: flex; flex-direction: column; gap: 50px; margin-bottom: 8vh; margin-top: 10vh; }
             .footer-col { align-items: center !important; text-align: center !important; }
-            .footer-sub-col { align-items: center; }
+            .footer-sub-col { align-items: center; text-align: center; }
             
             .footer-massive-name { font-size: 24vw; margin-bottom: 20px; }
             .footer-bottom { flex-direction: column; gap: 15px; }
@@ -259,27 +269,33 @@
 </head>
 <body>
 
+    <!-- Header Navigation -->
     <nav class="top-nav">
-        <div class="nav-col">
+        <!-- Left Nav -->
+        <div class="nav-col left-col">
             <a href="/">SIMON</a>
         </div>
         
-        <div class="nav-col sync-grid">
+        <!-- Center Nav using the Sync Grid -->
+        <div class="sync-grid">
             <a href="archive.html">archive</a>
             <a href="contact.html">Contact</a>
         </div>
         
-        <div class="nav-col">
+        <!-- Right Nav -->
+        <div class="nav-col right-col">
             <a href="random-energy.html">Random Energy</a>
         </div>
     </nav>
 
+    <!-- 3D Scene Track -->
     <div class="hero-scroll-track">
         <div class="hero-sticky-container">
             <div id="webgl-container"></div>
         </div>
     </div>
 
+    <!-- Selected Works -->
     <section id="work-section" class="video-section">
         <h2 class="section-headline">Selected Works</h2>
         <div class="video-grid">
@@ -288,8 +304,10 @@
         </div>
     </section>
 
+    <!-- The Cinematic Footer -->
     <footer class="site-footer">
         
+        <!-- Looping Video Background -->
         <video class="footer-video-bg" autoplay loop muted playsinline>
             <source src="./assets/footer-loop.mp4" type="video/mp4">
         </video>
@@ -297,13 +315,15 @@
         <div class="footer-content">
             
             <div class="footer-columns">
+                <!-- Left Column -->
                 <div class="footer-col left-col">
                     <h4>SOCIALS</h4>
                     <a href="https://www.instagram.com/latenight.lasagna/" target="_blank">Instagram</a>
                     <a href="https://de.linkedin.com/in/moinsen" target="_blank">LinkedIn</a>
                 </div>
                 
-                <div class="footer-col sync-grid">
+                <!-- Center Column using the exact same Sync Grid -->
+                <div class="sync-grid">
                     <div class="footer-sub-col">
                         <h4 class="lowercase-title">shop</h4>
                         <a href="https://www.cgtrader.com/designers/latenight-lasagna" target="_blank">CGTrader</a>
@@ -314,14 +334,17 @@
                     </div>
                 </div>
                 
+                <!-- Right Column -->
                 <div class="footer-col right-col">
                     <h4>OFFICE</h4>
                     <p>Ungerstraße 12<br>04318 Leipzig<br>Germany</p>
                 </div>
             </div>
 
+            <!-- Massive Name -->
             <div class="footer-massive-name">SIMON</div>
 
+            <!-- Legal Bar -->
             <div class="footer-bottom">
                 <span>© 2026 SIMON HAHN</span>
                 <div class="legal-links">
@@ -331,13 +354,15 @@
         </div>
     </footer>
 
+    <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
 
+    <!-- UI Interactions Script (Scramble Text) -->
     <script>
         const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
-        const navLinks = document.querySelectorAll('.top-nav a');
+        const navLinks = document.querySelectorAll('.top-nav a, .sync-grid a:not([href^="mailto"])');
 
         navLinks.forEach(link => {
             link.dataset.value = link.textContent.toUpperCase();
@@ -364,6 +389,7 @@
         });
     </script>
 
+    <!-- Core WebGL Engine Script -->
     <script>
         // Smooth Scrolling
         const lenis = new Lenis({
