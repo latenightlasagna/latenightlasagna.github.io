@@ -17,11 +17,11 @@
             overscroll-behavior: none;
         }
 
-        /* --- Custom Blue Cursor (Updated) --- */
+        /* --- Custom Blue Cursor --- */
         .cursor {
             width: 12px; 
             height: 12px;
-            background-color: rgb(0, 0, 255); /* Changed to pure blue */
+            background-color: rgb(0, 0, 255); 
             border-radius: 50%;
             position: fixed; 
             top: 0; 
@@ -136,7 +136,7 @@
             opacity: 1;
         }
 
-        /* --- Dynamic Image Styles --- */
+        /* Dynamic Image Styles */
         .gallery-group img {
             position: absolute;
             max-width: 350px;
@@ -144,7 +144,7 @@
             object-fit: cover;
             box-shadow: 0px 20px 40px rgba(0,0,0,0.1); 
             transform: translate(-50%, -50%);
-            /* The transition allows the random positions to animate smoothly like a shuffle! */
+            /* Smoothly animates the images into their new random positions */
             transition: top 0.6s cubic-bezier(0.25, 1, 0.5, 1), left 0.6s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
@@ -211,4 +211,134 @@
             </div>
             <div class="gallery-group" id="project-3">
                 <img src="./assets/large3.webp" alt="Domestika 1">
-                <img src="./assets/
+                <img src="./assets/img2.webp" alt="Domestika 2">
+            </div>
+            <div class="gallery-group" id="project-4">
+                <img src="./assets/Edga_Styleframe_01.jpg" alt="Spotify">
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
+
+    <script>
+        const cursor = document.querySelector('.cursor');
+        // Start completely off-screen so it doesn't freeze in the top left corner
+        let mouseX = -100; 
+        let mouseY = -100;
+        let cursorX = -100;
+        let cursorY = -100;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        function animateCursor() {
+            // High-speed snappy Lerp (0.5)
+            cursorX += (mouseX - cursorX) * 0.5;
+            cursorY += (mouseY - cursorY) * 0.5;
+            
+            cursor.style.left = cursorX + 'px';
+            cursor.style.top = cursorY + 'px';
+            
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+    </script>
+
+    <script>
+        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+        const navLinks = document.querySelectorAll('.top-nav a');
+
+        navLinks.forEach(link => {
+            link.dataset.value = link.textContent.toUpperCase();
+            let interval = null; 
+
+            link.addEventListener('mouseenter', event => {
+                let iteration = 0;
+                clearInterval(interval);
+
+                interval = setInterval(() => {
+                    event.target.textContent = event.target.textContent
+                        .split("")
+                        .map((letter, index) => {
+                            if (index < iteration) return event.target.dataset.value[index];
+                            if (event.target.dataset.value[index] === " ") return " ";
+                            return letters[Math.floor(Math.random() * letters.length)];
+                        })
+                        .join("");
+
+                    if (iteration >= event.target.dataset.value.length) clearInterval(interval);
+                    iteration += 1 / 3; 
+                }, 30);
+            });
+        });
+    </script>
+
+    <script>
+        // Start Smooth Scrolling safely
+        try {
+            const lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
+            function raf(time) {
+                lenis.raf(time);
+                requestAnimationFrame(raf);
+            }
+            requestAnimationFrame(raf);
+        } catch (e) {
+            console.log("Smooth scroll bypassed.");
+        }
+
+        // --- Archive Randomization & Hover Interaction ---
+        const archiveItems = document.querySelectorAll('.archive-item');
+        const galleryGroups = document.querySelectorAll('.gallery-group');
+
+        // Generates random % bounds so the layout is totally responsive
+        function randomizeImages(group) {
+            const images = group.querySelectorAll('img');
+            images.forEach((img, index) => {
+                // Keeps the center of the image safely within 20% and 80% of the container space
+                const randomLeft = 20 + Math.random() * 60; 
+                const randomTop = 20 + Math.random() * 60;
+                
+                img.style.left = `${randomLeft}%`;
+                img.style.top = `${randomTop}%`;
+                
+                // Ensures first image in HTML code is layered on top
+                img.style.zIndex = 10 - index; 
+            });
+        }
+
+        // Listen for hovers
+        archiveItems.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                archiveItems.forEach(i => i.classList.remove('active-text'));
+                galleryGroups.forEach(group => group.classList.remove('active'));
+                
+                item.classList.add('active-text');
+
+                const targetId = item.getAttribute('data-target');
+                const targetGroup = document.getElementById(targetId);
+                if (targetGroup) {
+                    targetGroup.classList.add('active');
+                    randomizeImages(targetGroup);
+                }
+            });
+        });
+
+        // --- INSTANT Auto-Open First Project ---
+        if (archiveItems.length > 0) {
+            const firstItem = archiveItems[0];
+            const firstTargetId = firstItem.getAttribute('data-target');
+            const firstGroup = document.getElementById(firstTargetId);
+
+            if (firstGroup) {
+                firstItem.classList.add('active-text');
+                firstGroup.classList.add('active');
+                randomizeImages(firstGroup);
+            }
+        }
+    </script>
+</body>
+</html>
