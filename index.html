@@ -23,7 +23,6 @@
             padding: 30px 50px;
             box-sizing: border-box;
             
-            /* 3-column grid locks the center perfectly to the middle of the screen */
             display: grid;
             grid-template-columns: 1fr auto 1fr;
             align-items: center;
@@ -51,16 +50,14 @@
         }
 
         /* --- THE BULLETPROOF ALIGNMENT LOCK --- */
-        /* Shared by both the Header and Footer to guarantee pixel-perfect vertical alignment */
         .sync-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* Two perfectly equal halves */
-            gap: 60px; /* The exact center gap */
-            width: 400px; /* Fixed width prevents word length from shifting the center axis */
+            grid-template-columns: 1fr 1fr; 
+            gap: 60px; 
+            width: 400px; 
             pointer-events: auto;
         }
 
-        /* Right-aligns the left column (archive / shop) */
         .sync-col-left {
             display: flex;
             flex-direction: column;
@@ -68,7 +65,6 @@
             text-align: right;
         }
 
-        /* Left-aligns the right column (Contact) */
         .sync-col-right {
             display: flex;
             flex-direction: column;
@@ -76,9 +72,7 @@
             text-align: left;
         }
 
-        /* Header vertical alignment */
         .top-nav .sync-grid { align-items: center; }
-        /* Footer vertical alignment */
         .site-footer .sync-grid { align-items: start; }
 
         /* --- Scroll-to-Fly Layout --- */
@@ -202,10 +196,6 @@
             text-transform: uppercase;
         }
 
-        .lowercase-title {
-            text-transform: lowercase !important;
-        }
-
         .footer-col a, .footer-col p, .sync-grid a, .sync-grid p {
             display: block;
             color: #ffffff;
@@ -213,6 +203,7 @@
             font-size: 14px;
             margin-bottom: 8px;
             line-height: 1.5;
+            text-transform: uppercase; /* Forces all text to be uppercase */
             transition: opacity 0.3s ease;
         }
 
@@ -246,6 +237,7 @@
         .legal-links a {
             color: #ffffff;
             text-decoration: none;
+            text-transform: uppercase;
             transition: opacity 0.3s ease;
         }
         .legal-links a:hover { opacity: 0.5; }
@@ -280,15 +272,15 @@
         
         <div class="sync-grid">
             <div class="sync-col-left">
-                <a href="archive.html">archive</a>
+                <a href="archive.html">ARCHIVE</a>
             </div>
             <div class="sync-col-right">
-                <a href="contact.html">Contact</a>
+                <a href="contact.html">CONTACT</a>
             </div>
         </div>
         
         <div class="nav-col right-col">
-            <a href="random-energy.html">Random Energy</a>
+            <a href="random-energy.html">RANDOM ENERGY</a>
         </div>
     </nav>
 
@@ -299,10 +291,10 @@
     </div>
 
     <section id="work-section" class="video-section">
-        <h2 class="section-headline">Selected Works</h2>
+        <h2 class="section-headline">SELECTED WORKS</h2>
         <div class="video-grid">
-            <div class="video-placeholder">Video Container 1</div>
-            <div class="video-placeholder">Video Container 2</div>
+            <div class="video-placeholder">VIDEO CONTAINER 1</div>
+            <div class="video-placeholder">VIDEO CONTAINER 2</div>
         </div>
     </section>
 
@@ -317,24 +309,24 @@
             <div class="footer-columns">
                 <div class="footer-col left-col">
                     <h4>SOCIALS</h4>
-                    <a href="https://www.instagram.com/latenight.lasagna/" target="_blank">Instagram</a>
-                    <a href="https://de.linkedin.com/in/moinsen" target="_blank">LinkedIn</a>
+                    <a href="https://www.instagram.com/latenight.lasagna/" target="_blank">INSTAGRAM</a>
+                    <a href="https://de.linkedin.com/in/moinsen" target="_blank">LINKEDIN</a>
                 </div>
                 
                 <div class="sync-grid">
                     <div class="sync-col-left">
-                        <h4 class="lowercase-title">shop</h4>
-                        <a href="https://www.cgtrader.com/designers/latenight-lasagna" target="_blank">CGTrader</a>
+                        <h4>SHOP</h4>
+                        <a href="https://www.cgtrader.com/designers/latenight-lasagna" target="_blank">CGTRADER</a>
                     </div>
                     <div class="sync-col-right">
                         <h4>CONTACT</h4>
-                        <a href="mailto:contact@simonhahn.de">contact@simonhahn.de</a>
+                        <a href="mailto:contact@simonhahn.de">CONTACT@SIMONHAHN.DE</a>
                     </div>
                 </div>
                 
                 <div class="footer-col right-col">
                     <h4>OFFICE</h4>
-                    <p>Ungerstraße 12<br>04318 Leipzig<br>Germany</p>
+                    <p>UNGERSTRASSE 12<br>04318 LEIPZIG<br>GERMANY</p>
                 </div>
             </div>
 
@@ -355,10 +347,10 @@
 
     <script>
         const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
-        // Target all links in nav and grid, except mailto links so the email address doesn't scramble!
-        const navLinks = document.querySelectorAll('.top-nav a, .sync-grid a:not([href^="mailto"])');
+        // Target ALL links in the top navigation and the entire footer
+        const allLinks = document.querySelectorAll('.top-nav a, .site-footer a');
 
-        navLinks.forEach(link => {
+        allLinks.forEach(link => {
             link.dataset.value = link.textContent.toUpperCase();
             let interval = null; 
 
