@@ -67,7 +67,6 @@
         .archive-container {
             display: flex;
             width: 100%;
-            /* 50vh Padding strictly guarantees the first and last items can reach absolute center */
             padding: 50vh 50px; 
             box-sizing: border-box;
         }
@@ -76,8 +75,8 @@
             width: 40%;
             display: flex;
             flex-direction: column;
-            /* Increased gap so the snapping targets are clearly separated */
-            gap: 25vh; 
+            /* TWEAK 1: Drastically reduced the gap for a dense "table of contents" feel */
+            gap: 15px; 
             z-index: 10;
         }
 
@@ -92,7 +91,6 @@
             display: flex;
             align-items: center;
             width: max-content;
-            /* Performance tweak for the constant JS transforms */
             will-change: transform, opacity; 
         }
 
@@ -159,9 +157,8 @@
             .top-nav a { color: #000; }
             .nav-col { gap: 20px; justify-content: center; }
             
-            /* Responsive gap for mobile screens */
             .archive-container { padding: 50vh 20px; }
-            .archive-list { width: 100%; gap: 15vh; }
+            .archive-list { width: 100%; gap: 15px; }
             .archive-item { font-size: 16px; }
             
             .archive-gallery { width: 100%; opacity: 0.3; } 
@@ -282,7 +279,7 @@
             lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
             function raf(time) {
                 lenis.raf(time);
-                updateScrollState(); // Run the center detection every frame
+                updateScrollState(); 
                 requestAnimationFrame(raf);
             }
             requestAnimationFrame(raf);
@@ -307,8 +304,9 @@
                 let isValid = false;
                 let attempts = 0;
 
-                const marginX = 15; 
-                const marginY = 15; 
+                // TWEAK 2: Reduced margins so images can push out to the extreme edges of the screen
+                const marginX = 2; 
+                const marginY = 5; 
 
                 while (!isValid && attempts < 50) {
                     randomLeft = marginX + Math.random() * (100 - marginX * 2);
@@ -317,10 +315,11 @@
                     const pxLeft = (randomLeft / 100) * window.innerWidth;
                     const pxTop = (randomTop / 100) * window.innerHeight;
 
+                    // Reduced the collision buffer slightly to allow more breathing room for the images
                     const isOverlappingList = 
-                        pxLeft < (listRect.right + 100) && 
-                        pxTop > (listRect.top - 100) && 
-                        pxTop < (listRect.bottom + 100);
+                        pxLeft < (listRect.right + 50) && 
+                        pxTop > (listRect.top - 50) && 
+                        pxTop < (listRect.bottom + 50);
 
                     if (!isOverlappingList) {
                         isValid = true;
@@ -348,12 +347,12 @@
                 const itemCenter = rect.top + rect.height / 2;
                 const distance = Math.abs(centerY - itemCenter);
 
-                // Responsive fade threshold based on screen height
-                const fadeThreshold = window.innerHeight * 0.3;
-                const opacity = Math.max(0.15, 1 - (distance / fadeThreshold));
+                // TWEAK 3: Greatly expanded the fadeThreshold so surrounding text stays visible
+                const fadeThreshold = window.innerHeight * 0.6;
+                const opacity = Math.max(0.2, 1 - (distance / fadeThreshold));
                 item.style.opacity = opacity;
                 
-                // Cinematic Push to the right
+                // Keep the cinematic push
                 const translateX = Math.max(0, 40 - (distance * 0.15));
                 item.style.transform = `translateX(${translateX}px)`;
 
@@ -363,7 +362,6 @@
                 }
             });
 
-            // Update Gallery if a new item claims the center spot
             if (activeItem && activeItem !== currentActiveItem) {
                 currentActiveItem = activeItem;
                 const targetId = activeItem.getAttribute('data-target');
@@ -391,32 +389,30 @@
 
         if (lenis) {
             lenis.on('scroll', () => {
-                if (isSnapping) return; // Prevent double-snapping
+                if (isSnapping) return; 
 
                 clearTimeout(snapTimeout);
                 
-                // Debounce: Wait 120ms after the user stops physically scrolling
                 snapTimeout = setTimeout(() => {
                     if (currentActiveItem) {
                         isSnapping = true;
                         
-                        // Calculate exact pixel offset to put the item perfectly in the center
                         const offset = -(window.innerHeight / 2) + (currentActiveItem.offsetHeight / 2);
                         
+                        // TWEAK 4: Sped up the snap animation to match the tight list layout
                         lenis.scrollTo(currentActiveItem, {
                             offset: offset,
-                            duration: 0.8,
+                            duration: 0.4, 
                             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
                         });
 
-                        // Release the snap lock just after the animation finishes
-                        setTimeout(() => { isSnapping = false; }, 850);
+                        setTimeout(() => { isSnapping = false; }, 450);
                     }
                 }, 120); 
             });
         }
 
-        // --- Force layout calculation on load ---
+        // Force layout calculation on load
         setTimeout(updateScrollState, 50);
     </script>
 </body>
