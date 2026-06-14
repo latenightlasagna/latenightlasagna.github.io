@@ -45,8 +45,6 @@
         }
 
         /* --- Scroll-to-Fly Layout --- */
-        
-        /* Reduced to 140vh. Less scrolling required = faster transition */
         .hero-scroll-track {
             height: 140vh; 
             position: relative;
@@ -138,7 +136,7 @@
         </div>
     </div>
 
-    <section class="video-section">
+    <section id="work-section" class="video-section">
         <h2 class="section-headline">Selected Works</h2>
         <div class="video-grid">
             <div class="video-placeholder">Video Container 1</div>
@@ -249,30 +247,16 @@
             sprites.push(sprite);
         }
 
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        window.addEventListener('pointerdown', (event) => {
-            if (event.target.tagName.toLowerCase() === 'a') return;
-
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(particleGroup.children);
-
-            if (intersects.length > 0) {
-                // window.location.href = intersects[0].object.userData.link;
-            }
-        });
-
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
+        // --- Core Variables for Auto-Scroll ---
         const scrollTrack = document.querySelector('.hero-scroll-track');
+        const targetSection = document.getElementById('work-section');
+        let isAutoScrolling = false; // The flag to prevent the script from firing 60 times a second
 
         function animate() {
             requestAnimationFrame(animate);
@@ -284,16 +268,30 @@
                 if (sprite.position.z > 20 || sprite.position.z < -100) sprite.userData.velocity.z *= -1;
             });
 
+            // Calculate Scroll Progress
             const maxScroll = scrollTrack.offsetHeight - window.innerHeight;
             const currentScroll = Math.max(0, Math.min(window.scrollY, maxScroll));
             const scrollProgress = currentScroll / maxScroll; 
 
-            // THE FIX: Math Vectoring
-            // Calculate the exact direction the camera is sitting relative to the center
-            const cameraDirection = camera.position.clone().normalize();
+            // --- THE NEW AUTO-SCROLL LOGIC ---
+            // If the user scrolls past 65% of the flythrough, take over and smoothly glide them down
+            if (scrollProgress > 0.65 && !isAutoScrolling) {
+                isAutoScrolling = true; // Lock the flag so it only fires once
+                
+                // Instruct Lenis to glide the user to the target section over 1.5 seconds
+                lenis.scrollTo(targetSection, {
+                    duration: 1.5,
+                    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+                });
+            }
             
-            // Push the group along that exact vector so it ALWAYS flies straight at the lens.
-            // When scrolled back up (scrollProgress = 0), this resets perfectly to (0,0,0).
+            // If the user manually scrolls back up past the 55% mark, reset the flag so the animation can trigger again
+            if (scrollProgress < 0.55 && isAutoScrolling) {
+                isAutoScrolling = false;
+            }
+
+            // Math Vectoring for the flythrough
+            const cameraDirection = camera.position.clone().normalize();
             particleGroup.position.copy(cameraDirection.multiplyScalar(scrollProgress * 220));
 
             controls.update(); 
