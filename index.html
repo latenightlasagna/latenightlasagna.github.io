@@ -189,32 +189,37 @@
         }
         requestAnimationFrame(raf);
 
-        // Scene Setup
+        // --- THE NEW CAMERA RIG SETUP ---
         const container = document.getElementById('webgl-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
 
+        // 1. The Real Camera (We do not set its position here anymore)
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 20;
+        
+        // 2. The Dummy Camera (Tracks the orbit controls)
+        const trackballDummy = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        trackballDummy.position.z = 50; // Pulled back slightly so the symmetric cloud looks good
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        const controls = new THREE.TrackballControls(camera, renderer.domElement);
+        // Bind the controls to the DUMMY camera, not the real one!
+        const controls = new THREE.TrackballControls(trackballDummy, renderer.domElement);
         controls.staticMoving = false; 
         controls.dynamicDampingFactor = 0.05; 
         controls.noPan = true; 
         controls.noZoom = true; 
         controls.rotateSpeed = 2.0;
 
+        // --- The Image Cloud ---
         const particleGroup = new THREE.Group();
         scene.add(particleGroup);
 
         const IMAGE_COUNT = window.innerWidth < 768 ? 35 : 100;
         const sprites = [];
-        
         const textureLoader = new THREE.TextureLoader();
         const imagePaths = [
             './assets/Edga_Styleframe_01.jpg',
@@ -229,9 +234,10 @@
             const material = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(material);
             
-            sprite.position.x = (Math.random() - 0.5) * 100;
-            sprite.position.y = (Math.random() - 0.5) * 100;
-            sprite.position.z = (Math.random() * -100) + 10; 
+            // Rebalanced the math into a perfect cube/sphere so it looks correct from every orbit angle
+            sprite.position.x = (Math.random() - 0.5) * 120;
+            sprite.position.y = (Math.random() - 0.5) * 120;
+            sprite.position.z = (Math.random() - 0.5) * 120; 
             
             sprite.scale.set(5, 5, 1);
             
@@ -250,6 +256,10 @@
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
+            
+            trackballDummy.aspect = window.innerWidth / window.innerHeight;
+            trackballDummy.updateProjectionMatrix();
+            
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
@@ -261,11 +271,12 @@
         function animate() {
             requestAnimationFrame(animate);
 
+            // Floating animation with updated boundaries for the new symmetric volume
             sprites.forEach(sprite => {
                 sprite.position.add(sprite.userData.velocity);
-                if (sprite.position.x > 60 || sprite.position.x < -60) sprite.userData.velocity.x *= -1;
-                if (sprite.position.y > 60 || sprite.position.y < -60) sprite.userData.velocity.y *= -1;
-                if (sprite.position.z > 20 || sprite.position.z < -100) sprite.userData.velocity.z *= -1;
+                if (sprite.position.x > 80 || sprite.position.x < -80) sprite.userData.velocity.x *= -1;
+                if (sprite.position.y > 80 || sprite.position.y < -80) sprite.userData.velocity.y *= -1;
+                if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
             });
 
             // Calculate Scroll Progress
@@ -273,28 +284,34 @@
             const currentScroll = Math.max(0, Math.min(window.scrollY, maxScroll));
             const scrollProgress = currentScroll / maxScroll; 
 
-            // --- THE UPDATED AUTO-SCROLL LOGIC ---
-            
-            // TWEAK 1: Lowered to 0.60. The camera auto-scrolls down slightly earlier.
-            if (scrollProgress > 0.60 && !isAutoScrolling) {
+            // --- REFINED AUTO-SCROLL CUE POINTS ---
+            // Triggers earlier (0.55) to make the cut into the video section feel effortless
+            if (scrollProgress > 0.55 && !isAutoScrolling) {
                 isAutoScrolling = true; 
-                
                 lenis.scrollTo(targetSection, {
                     duration: 1.5,
                     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
                 });
             }
-            
-            // TWEAK 2: Lowered to 0.45. The script resets earlier when scrolling back up.
-            if (scrollProgress < 0.45 && isAutoScrolling) {
+            // Resets earlier (0.40) to give a wide, safe buffer zone
+            if (scrollProgress < 0.40 && isAutoScrolling) {
                 isAutoScrolling = false;
             }
 
-            // Math Vectoring for the flythrough
-            const cameraDirection = camera.position.clone().normalize();
-            particleGroup.position.copy(cameraDirection.multiplyScalar(scrollProgress * 220));
+            // --- THE MATHEMATICALLY PERFECT FLYTHROUGH ---
+            controls.update(); // 1. Let Trackball update the Dummy Camera
 
-            controls.update(); 
+            // 2. Lock the Real Camera's rotation to the Dummy's rotation
+            camera.quaternion.copy(trackballDummy.quaternion);
+
+            // 3. Calculate the exact vector pointing straight out of the Dummy's lens
+            const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(trackballDummy.quaternion);
+            
+            // 4. Move the Real Camera forward along that vector! 
+            // The Image Cloud stays at (0,0,0). The Camera flies through it. No more sliding!
+            const flyDistance = scrollProgress * 150; 
+            camera.position.copy(trackballDummy.position).add(forwardVector.multiplyScalar(flyDistance));
+
             renderer.render(scene, camera);
         }
 
