@@ -67,7 +67,7 @@
         .archive-container {
             display: flex;
             width: 100%;
-            /* TWEAK 1: 50vh padding forces the first item to perfectly center on load */
+            /* 50vh Padding strictly guarantees the first and last items can reach absolute center */
             padding: 50vh 50px; 
             box-sizing: border-box;
         }
@@ -76,8 +76,8 @@
             width: 40%;
             display: flex;
             flex-direction: column;
-            /* TWEAK 2: Massive gap creates physical scroll distance between projects */
-            gap: 12vh; 
+            /* Increased gap so the snapping targets are clearly separated */
+            gap: 25vh; 
             z-index: 10;
         }
 
@@ -88,11 +88,12 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             cursor: none;
-            /* Only transition the color! JS handles the position/opacity every frame */
             transition: color 0.3s ease;
             display: flex;
             align-items: center;
             width: max-content;
+            /* Performance tweak for the constant JS transforms */
+            will-change: transform, opacity; 
         }
 
         .archive-item .tag {
@@ -104,7 +105,6 @@
             transition: all 0.3s ease;
         }
 
-        /* Removed hover states. Now exclusively relies on JS applying .active-text */
         .archive-item.active-text {
             color: #000000; 
         }
@@ -137,7 +137,6 @@
             opacity: 1;
         }
 
-        /* Dynamic Image Styles */
         .gallery-group img {
             position: absolute;
             max-width: 350px;
@@ -145,10 +144,10 @@
             object-fit: cover;
             box-shadow: 0px 20px 40px rgba(0,0,0,0.1); 
             transform: translate(-50%, -50%) scale(1);
-            /* Animates both position and scaling dynamically */
             transition: top 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
                         left 0.6s cubic-bezier(0.25, 1, 0.5, 1),
                         transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: top, left, transform;
         }
 
         /* --- Mobile Optimization --- */
@@ -160,9 +159,10 @@
             .top-nav a { color: #000; }
             .nav-col { gap: 20px; justify-content: center; }
             
+            /* Responsive gap for mobile screens */
             .archive-container { padding: 50vh 20px; }
-            .archive-list { width: 100%; }
-            .archive-item { font-size: 16px; margin-bottom: 10px; }
+            .archive-list { width: 100%; gap: 15vh; }
+            .archive-item { font-size: 16px; }
             
             .archive-gallery { width: 100%; opacity: 0.3; } 
             .gallery-group img { max-width: 200px; }
@@ -187,7 +187,6 @@
     </nav>
 
     <div class="archive-container">
-        
         <div class="archive-list">
             <div class="archive-item" data-target="project-1">
                 LUE.NE.COM <span class="tag">— WEB</span>
@@ -220,7 +219,6 @@
                 <img src="./assets/Edga_Styleframe_01.jpg" alt="Spotify">
             </div>
         </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
@@ -279,9 +277,24 @@
     </script>
 
     <script>
+        let lenis;
+        try {
+            lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
+            function raf(time) {
+                lenis.raf(time);
+                updateScrollState(); // Run the center detection every frame
+                requestAnimationFrame(raf);
+            }
+            requestAnimationFrame(raf);
+        } catch (e) {
+            console.log("Smooth scroll bypassed.");
+        }
+
         const archiveListContainer = document.querySelector('.archive-list');
         const archiveItems = document.querySelectorAll('.archive-item');
         const galleryGroups = document.querySelectorAll('.gallery-group');
+        
+        let currentActiveItem = null;
         let currentActiveId = null;
 
         // --- Core Randomization Engine ---
@@ -304,7 +317,6 @@
                     const pxLeft = (randomLeft / 100) * window.innerWidth;
                     const pxTop = (randomTop / 100) * window.innerHeight;
 
-                    // Rejects the coordinates if they fall over the text column
                     const isOverlappingList = 
                         pxLeft < (listRect.right + 100) && 
                         pxTop > (listRect.top - 100) && 
@@ -331,18 +343,18 @@
             let minDistance = Infinity;
             let activeItem = null;
 
-            // 1. Calculate which project is closest to the middle of the screen
             archiveItems.forEach(item => {
                 const rect = item.getBoundingClientRect();
                 const itemCenter = rect.top + rect.height / 2;
                 const distance = Math.abs(centerY - itemCenter);
 
-                // Cinematic Fade: As items move away from the center, they fade out naturally
-                const opacity = Math.max(0.15, 1 - (distance / 250));
+                // Responsive fade threshold based on screen height
+                const fadeThreshold = window.innerHeight * 0.3;
+                const opacity = Math.max(0.15, 1 - (distance / fadeThreshold));
                 item.style.opacity = opacity;
                 
-                // Cinematic Push: As the item nears the center, it slides slightly to the right to pop out!
-                const translateX = Math.max(0, 30 - (distance * 0.2));
+                // Cinematic Push to the right
+                const translateX = Math.max(0, 40 - (distance * 0.15));
                 item.style.transform = `translateX(${translateX}px)`;
 
                 if (distance < minDistance) {
@@ -351,8 +363,9 @@
                 }
             });
 
-            // 2. If the active item has changed, trigger the gallery shuffle
-            if (activeItem) {
+            // Update Gallery if a new item claims the center spot
+            if (activeItem && activeItem !== currentActiveItem) {
+                currentActiveItem = activeItem;
                 const targetId = activeItem.getAttribute('data-target');
                 
                 if (targetId !== currentActiveId) {
@@ -372,18 +385,35 @@
             }
         }
 
-        // --- Smooth Scroll Loop ---
-        try {
-            const lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
-            function raf(time) {
-                lenis.raf(time);
-                // We run the detection engine every single frame!
-                updateScrollState(); 
-                requestAnimationFrame(raf);
-            }
-            requestAnimationFrame(raf);
-        } catch (e) {
-            console.log("Smooth scroll bypassed.");
+        // --- THE MAGNETIC SNAP ENGINE ---
+        let snapTimeout;
+        let isSnapping = false;
+
+        if (lenis) {
+            lenis.on('scroll', () => {
+                if (isSnapping) return; // Prevent double-snapping
+
+                clearTimeout(snapTimeout);
+                
+                // Debounce: Wait 120ms after the user stops physically scrolling
+                snapTimeout = setTimeout(() => {
+                    if (currentActiveItem) {
+                        isSnapping = true;
+                        
+                        // Calculate exact pixel offset to put the item perfectly in the center
+                        const offset = -(window.innerHeight / 2) + (currentActiveItem.offsetHeight / 2);
+                        
+                        lenis.scrollTo(currentActiveItem, {
+                            offset: offset,
+                            duration: 0.8,
+                            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+                        });
+
+                        // Release the snap lock just after the animation finishes
+                        setTimeout(() => { isSnapping = false; }, 850);
+                    }
+                }, 120); 
+            });
         }
 
         // --- Force layout calculation on load ---
