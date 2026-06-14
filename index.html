@@ -27,6 +27,9 @@
             align-items: center;
             z-index: 100; 
             pointer-events: none; 
+            
+            /* --- THE BLEND MODE MAGIC --- */
+            mix-blend-mode: difference;
         }
 
         .nav-col {
@@ -37,7 +40,8 @@
 
         .top-nav a {
             text-decoration: none;
-            color: #000000;
+            /* Changed to WHITE so the 'difference' blend mode renders it black on a white background */
+            color: #ffffff; 
             font-weight: 500;
             font-size: 13px;
             text-transform: uppercase;
@@ -123,10 +127,12 @@
         </div>
         <div class="nav-col">
             <a href="archive.html">archive</a>
-            <a href="random-energy.html">Random Energy</a>
+            <!-- Swapped: Contact is now in the center column -->
+            <a href="contact.html">Contact</a>
         </div>
         <div class="nav-col">
-            <a href="contact.html">Contact</a>
+            <!-- Swapped: Random Energy is now on the far right -->
+            <a href="random-energy.html">Random Energy</a>
         </div>
     </nav>
 
@@ -148,6 +154,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
 
+    <!-- UI Interactions Script (Scramble Text) -->
     <script>
         const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
         const navLinks = document.querySelectorAll('.top-nav a');
@@ -177,6 +184,7 @@
         });
     </script>
 
+    <!-- Core WebGL Engine Script -->
     <script>
         // Smooth Scrolling (Locomotive style physics)
         const lenis = new Lenis({
@@ -194,19 +202,18 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
 
-        // 1. The Real Camera (We do not set its position here anymore)
+        // 1. The Real Camera
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         
-        // 2. The Dummy Camera (Tracks the orbit controls)
+        // 2. The Dummy Camera
         const trackballDummy = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        trackballDummy.position.z = 50; // Pulled back slightly so the symmetric cloud looks good
+        trackballDummy.position.z = 50; 
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        // Bind the controls to the DUMMY camera, not the real one!
         const controls = new THREE.TrackballControls(trackballDummy, renderer.domElement);
         controls.staticMoving = false; 
         controls.dynamicDampingFactor = 0.05; 
@@ -234,7 +241,6 @@
             const material = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(material);
             
-            // Rebalanced the math into a perfect cube/sphere so it looks correct from every orbit angle
             sprite.position.x = (Math.random() - 0.5) * 120;
             sprite.position.y = (Math.random() - 0.5) * 120;
             sprite.position.z = (Math.random() - 0.5) * 120; 
@@ -271,7 +277,6 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // Floating animation with updated boundaries for the new symmetric volume
             sprites.forEach(sprite => {
                 sprite.position.add(sprite.userData.velocity);
                 if (sprite.position.x > 80 || sprite.position.x < -80) sprite.userData.velocity.x *= -1;
@@ -279,13 +284,10 @@
                 if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
             });
 
-            // Calculate Scroll Progress
             const maxScroll = scrollTrack.offsetHeight - window.innerHeight;
             const currentScroll = Math.max(0, Math.min(window.scrollY, maxScroll));
             const scrollProgress = currentScroll / maxScroll; 
 
-            // --- REFINED AUTO-SCROLL CUE POINTS ---
-            // Triggers earlier (0.55) to make the cut into the video section feel effortless
             if (scrollProgress > 0.55 && !isAutoScrolling) {
                 isAutoScrolling = true; 
                 lenis.scrollTo(targetSection, {
@@ -293,22 +295,14 @@
                     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
                 });
             }
-            // Resets earlier (0.40) to give a wide, safe buffer zone
             if (scrollProgress < 0.40 && isAutoScrolling) {
                 isAutoScrolling = false;
             }
 
-            // --- THE MATHEMATICALLY PERFECT FLYTHROUGH ---
-            controls.update(); // 1. Let Trackball update the Dummy Camera
-
-            // 2. Lock the Real Camera's rotation to the Dummy's rotation
+            controls.update(); 
             camera.quaternion.copy(trackballDummy.quaternion);
 
-            // 3. Calculate the exact vector pointing straight out of the Dummy's lens
             const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(trackballDummy.quaternion);
-            
-            // 4. Move the Real Camera forward along that vector! 
-            // The Image Cloud stays at (0,0,0). The Camera flies through it. No more sliding!
             const flyDistance = scrollProgress * 150; 
             camera.position.copy(trackballDummy.position).add(forwardVector.multiplyScalar(flyDistance));
 
