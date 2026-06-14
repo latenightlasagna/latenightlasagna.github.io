@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Archive</title>
+    <title>Archive | SIMON</title>
 
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='rgb(0,0,255)'/></svg>">
     
@@ -44,7 +44,7 @@
             transform: translate(-50%, -50%);
         }
 
-        /* --- Header Navigation --- */
+        /* --- Minimalist Header Layout (Upgraded to mathematically perfect Grid) --- */
         .top-nav {
             position: fixed; 
             top: 0;
@@ -52,9 +52,12 @@
             width: 100%;
             padding: 30px 50px;
             box-sizing: border-box;
-            display: flex;
-            justify-content: space-between; 
+            
+            /* 3-column grid locks the center perfectly to the middle of the screen */
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
             align-items: center;
+            
             z-index: 100; 
             pointer-events: none; 
             mix-blend-mode: difference;
@@ -62,9 +65,11 @@
 
         .nav-col {
             display: flex;
-            gap: 60px; 
             pointer-events: auto; 
         }
+
+        .nav-col.left-col { justify-content: flex-start; }
+        .nav-col.right-col { justify-content: flex-end; }
 
         .top-nav a {
             text-decoration: none;
@@ -74,6 +79,32 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             cursor: none; 
+            display: inline-block;
+            white-space: nowrap; /* Prevents text wrap layout bugs */
+        }
+
+        /* --- THE BULLETPROOF ALIGNMENT LOCK --- */
+        .sync-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            gap: 60px; 
+            width: 400px; 
+            pointer-events: auto;
+            align-items: center;
+        }
+
+        .sync-col-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        .sync-col-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
         }
 
         /* --- Archive Fixed UI Layer --- */
@@ -173,9 +204,12 @@
             body, .archive-item, .top-nav a { cursor: auto; } 
             .cursor { display: none; } 
             
-            .top-nav { padding: 20px; flex-direction: column; gap: 20px; mix-blend-mode: normal; background: #fff; }
+            .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; mix-blend-mode: normal; background: #fff; }
             .top-nav a { color: #000; }
-            .nav-col { gap: 20px; justify-content: center; }
+            .nav-col { gap: 20px; justify-content: center !important; }
+            
+            .sync-grid { width: 100%; display: flex; justify-content: space-around; gap: 15px; }
+            .sync-col-left, .sync-col-right { align-items: center; text-align: center; }
             
             .archive-list { left: 20px; }
             .archive-item { font-size: 16px; }
@@ -190,15 +224,21 @@
     <div class="cursor"></div>
 
     <nav class="top-nav">
-        <div class="nav-col">
+        <div class="nav-col left-col">
             <a href="/">SIMON</a>
         </div>
-        <div class="nav-col">
-            <a href="archive.html">archive</a>
-            <a href="contact.html">Contact</a>
+        
+        <div class="sync-grid">
+            <div class="sync-col-left">
+                <a href="archive.html">ARCHIVE</a>
+            </div>
+            <div class="sync-col-right">
+                <a href="contact.html">CONTACT</a>
+            </div>
         </div>
-        <div class="nav-col">
-            <a href="random-energy.html">Random Energy</a>
+        
+        <div class="nav-col right-col">
+            <a href="random-energy.html">RANDOM ENERGY</a>
         </div>
     </nav>
 
@@ -264,28 +304,39 @@
     </script>
 
     <script>
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+        // Removed wide characters to prevent jitter
+        const letters = "ABCDEFGHJKLNPRSTVXYZ0123456789#&*";
         const navLinks = document.querySelectorAll('.top-nav a');
 
         navLinks.forEach(link => {
-            link.dataset.value = link.textContent.toUpperCase();
+            link.dataset.value = link.textContent.trim().toUpperCase();
             let interval = null; 
 
-            link.addEventListener('mouseenter', event => {
+            link.addEventListener('mouseenter', () => {
+                
+                // BUGFIX: Locks the physical width of the link before it starts scrambling
+                if (!link.style.width) {
+                    const rect = link.getBoundingClientRect();
+                    link.style.width = Math.ceil(rect.width) + 'px';
+                }
+
                 let iteration = 0;
                 clearInterval(interval);
 
                 interval = setInterval(() => {
-                    event.target.textContent = event.target.textContent
+                    link.textContent = link.dataset.value
                         .split("")
                         .map((letter, index) => {
-                            if (index < iteration) return event.target.dataset.value[index];
-                            if (event.target.dataset.value[index] === " ") return " ";
+                            if (index < iteration) return link.dataset.value[index];
+                            if (link.dataset.value[index] === " ") return " ";
                             return letters[Math.floor(Math.random() * letters.length)];
                         })
                         .join("");
 
-                    if (iteration >= event.target.dataset.value.length) clearInterval(interval);
+                    if (iteration >= link.dataset.value.length) {
+                        clearInterval(interval);
+                        link.textContent = link.dataset.value; 
+                    }
                     iteration += 1 / 3; 
                 }, 30);
             });
