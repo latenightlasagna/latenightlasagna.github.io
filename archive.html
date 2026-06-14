@@ -67,8 +67,8 @@
         .archive-container {
             display: flex;
             width: 100%;
-            min-height: 100vh;
-            padding: 150px 50px 100px 50px; 
+            /* TWEAK 1: 50vh padding forces the first item to perfectly center on load */
+            padding: 50vh 50px; 
             box-sizing: border-box;
         }
 
@@ -76,7 +76,8 @@
             width: 40%;
             display: flex;
             flex-direction: column;
-            gap: 5px; 
+            /* TWEAK 2: Massive gap creates physical scroll distance between projects */
+            gap: 12vh; 
             z-index: 10;
         }
 
@@ -87,6 +88,7 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             cursor: none;
+            /* Only transition the color! JS handles the position/opacity every frame */
             transition: color 0.3s ease;
             display: flex;
             align-items: center;
@@ -102,12 +104,11 @@
             transition: all 0.3s ease;
         }
 
-        .archive-item:hover,
+        /* Removed hover states. Now exclusively relies on JS applying .active-text */
         .archive-item.active-text {
             color: #000000; 
         }
 
-        .archive-item:hover .tag,
         .archive-item.active-text .tag {
             opacity: 1; 
             transform: translateX(0);
@@ -117,8 +118,8 @@
         .archive-gallery {
             position: fixed;
             top: 0;
-            left: 0; /* Changed from right:0 so it spans the whole screen */
-            width: 100vw; /* Expanded to full viewport width */
+            left: 0; 
+            width: 100vw; 
             height: 100vh;
             pointer-events: none; 
             z-index: 1;
@@ -144,7 +145,7 @@
             object-fit: cover;
             box-shadow: 0px 20px 40px rgba(0,0,0,0.1); 
             transform: translate(-50%, -50%) scale(1);
-            /* Added 'transform' to the CSS transitions so the scaling animates smoothly */
+            /* Animates both position and scaling dynamically */
             transition: top 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
                         left 0.6s cubic-bezier(0.25, 1, 0.5, 1),
                         transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
@@ -159,7 +160,7 @@
             .top-nav a { color: #000; }
             .nav-col { gap: 20px; justify-content: center; }
             
-            .archive-container { padding: 180px 20px 50px 20px; }
+            .archive-container { padding: 50vh 20px; }
             .archive-list { width: 100%; }
             .archive-item { font-size: 16px; margin-bottom: 10px; }
             
@@ -278,24 +279,13 @@
     </script>
 
     <script>
-        try {
-            const lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
-            function raf(time) {
-                lenis.raf(time);
-                requestAnimationFrame(raf);
-            }
-            requestAnimationFrame(raf);
-        } catch (e) {
-            console.log("Smooth scroll bypassed.");
-        }
-
-        // --- Archive Randomization & Hover Interaction ---
         const archiveListContainer = document.querySelector('.archive-list');
         const archiveItems = document.querySelectorAll('.archive-item');
         const galleryGroups = document.querySelectorAll('.gallery-group');
+        let currentActiveId = null;
 
+        // --- Core Randomization Engine ---
         function randomizeImages(group) {
-            // Get the current dimensions and position of the text list so we can avoid it
             const listRect = archiveListContainer.getBoundingClientRect();
             const images = group.querySelectorAll('img');
             
@@ -304,72 +294,100 @@
                 let isValid = false;
                 let attempts = 0;
 
-                // Margins to prevent the image from spawning completely off the edge of the monitor
-                const marginX = 15; // percent
-                const marginY = 15; // percent
+                const marginX = 15; 
+                const marginY = 15; 
 
-                // Collision Detection Loop: Keep trying to find coordinates until they are safe
                 while (!isValid && attempts < 50) {
                     randomLeft = marginX + Math.random() * (100 - marginX * 2);
                     randomTop = marginY + Math.random() * (100 - marginY * 2);
 
-                    // Convert the percentage to actual pixel coordinates to check against the list
                     const pxLeft = (randomLeft / 100) * window.innerWidth;
                     const pxTop = (randomTop / 100) * window.innerHeight;
 
-                    // Does this point overlap the text list? (Adding a 150px buffer zone)
+                    // Rejects the coordinates if they fall over the text column
                     const isOverlappingList = 
-                        pxLeft < (listRect.right + 150) && 
+                        pxLeft < (listRect.right + 100) && 
                         pxTop > (listRect.top - 100) && 
                         pxTop < (listRect.bottom + 100);
 
                     if (!isOverlappingList) {
-                        isValid = true; // Safe! Exit the loop.
+                        isValid = true;
                     }
                     attempts++;
                 }
 
-                // Random Scale Offset (Between 0.85 and 1.15)
                 const randomScale = 0.85 + Math.random() * 0.3;
 
-                // Apply to the DOM
                 img.style.left = `${randomLeft}%`;
                 img.style.top = `${randomTop}%`;
                 img.style.transform = `translate(-50%, -50%) scale(${randomScale})`;
-                
                 img.style.zIndex = 10 - index; 
             });
         }
 
-        archiveItems.forEach(item => {
-            item.addEventListener('mouseenter', () => {
-                archiveItems.forEach(i => i.classList.remove('active-text'));
-                galleryGroups.forEach(group => group.classList.remove('active'));
-                
-                item.classList.add('active-text');
+        // --- Center-Screen Detection Engine ---
+        function updateScrollState() {
+            const centerY = window.innerHeight / 2;
+            let minDistance = Infinity;
+            let activeItem = null;
 
-                const targetId = item.getAttribute('data-target');
-                const targetGroup = document.getElementById(targetId);
-                if (targetGroup) {
-                    targetGroup.classList.add('active');
-                    randomizeImages(targetGroup);
+            // 1. Calculate which project is closest to the middle of the screen
+            archiveItems.forEach(item => {
+                const rect = item.getBoundingClientRect();
+                const itemCenter = rect.top + rect.height / 2;
+                const distance = Math.abs(centerY - itemCenter);
+
+                // Cinematic Fade: As items move away from the center, they fade out naturally
+                const opacity = Math.max(0.15, 1 - (distance / 250));
+                item.style.opacity = opacity;
+                
+                // Cinematic Push: As the item nears the center, it slides slightly to the right to pop out!
+                const translateX = Math.max(0, 30 - (distance * 0.2));
+                item.style.transform = `translateX(${translateX}px)`;
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    activeItem = item;
                 }
             });
-        });
 
-        // --- INSTANT Auto-Open First Project ---
-        if (archiveItems.length > 0) {
-            const firstItem = archiveItems[0];
-            const firstTargetId = firstItem.getAttribute('data-target');
-            const firstGroup = document.getElementById(firstTargetId);
+            // 2. If the active item has changed, trigger the gallery shuffle
+            if (activeItem) {
+                const targetId = activeItem.getAttribute('data-target');
+                
+                if (targetId !== currentActiveId) {
+                    currentActiveId = targetId;
 
-            if (firstGroup) {
-                firstItem.classList.add('active-text');
-                firstGroup.classList.add('active');
-                // Small delay to ensure the browser has computed the listRect bounding box before randomizing
-                setTimeout(() => randomizeImages(firstGroup), 50); 
+                    archiveItems.forEach(i => i.classList.remove('active-text'));
+                    galleryGroups.forEach(group => group.classList.remove('active'));
+                    
+                    activeItem.classList.add('active-text');
+                    
+                    const targetGroup = document.getElementById(targetId);
+                    if (targetGroup) {
+                        targetGroup.classList.add('active');
+                        randomizeImages(targetGroup);
+                    }
+                }
             }
         }
+
+        // --- Smooth Scroll Loop ---
+        try {
+            const lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
+            function raf(time) {
+                lenis.raf(time);
+                // We run the detection engine every single frame!
+                updateScrollState(); 
+                requestAnimationFrame(raf);
+            }
+            requestAnimationFrame(raf);
+        } catch (e) {
+            console.log("Smooth scroll bypassed.");
+        }
+
+        // --- Force layout calculation on load ---
+        setTimeout(updateScrollState, 50);
     </script>
 </body>
 </html>
