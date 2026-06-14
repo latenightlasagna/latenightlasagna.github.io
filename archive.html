@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Archive | My Portfolio</title>
     <style>
-        /* --- Core Layout --- */
+        /* --- Core Layout & Native Snapping --- */
         html, body { 
             margin: 0; 
             padding: 0;
@@ -14,7 +14,20 @@
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             color: #000000;
             cursor: none; 
+            /* THE FIX: Native CSS scroll snapping guarantees no wobble and no overscroll */
+            scroll-snap-type: y mandatory;
             overscroll-behavior: none;
+            /* Hides the ugly native scrollbar for a cleaner look */
+            scrollbar-width: none; 
+        }
+        body::-webkit-scrollbar { display: none; }
+
+        /* The invisible sections that drive the snapping */
+        .snap-section {
+            height: 100vh;
+            width: 100%;
+            scroll-snap-align: center;
+            scroll-snap-stop: always;
         }
 
         /* --- Custom Blue Cursor --- */
@@ -63,21 +76,29 @@
             cursor: none; 
         }
 
-        /* --- Archive List Layout --- */
-        .archive-container {
-            display: flex;
+        /* --- Archive Fixed UI Layer --- */
+        .archive-ui {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 50vh 50px; 
-            box-sizing: border-box;
+            height: 100vh;
+            pointer-events: none; /* Lets the scroll wheel pass through to the snapping blocks */
+            z-index: 10;
         }
 
         .archive-list {
-            width: 40%;
+            position: absolute;
+            /* Locks the top of the list exactly to the center of the screen */
+            top: 50%; 
+            left: 50px;
             display: flex;
             flex-direction: column;
-            /* TWEAK 1: Drastically reduced the gap for a dense "table of contents" feel */
+            /* TWEAK: Tightly packed list as requested */
             gap: 15px; 
-            z-index: 10;
+            /* The animation that physically slides the list up/down when you scroll */
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            pointer-events: auto;
         }
 
         .archive-item {
@@ -87,11 +108,12 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             cursor: none;
-            transition: color 0.3s ease;
             display: flex;
             align-items: center;
             width: max-content;
-            will-change: transform, opacity; 
+            transform-origin: left center;
+            /* Smoothly fades and scales the text */
+            transition: color 0.4s ease, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .archive-item .tag {
@@ -103,8 +125,11 @@
             transition: all 0.3s ease;
         }
 
+        /* The Active, Centered Text State */
         .archive-item.active-text {
             color: #000000; 
+            /* Pops the active item slightly to the right and scales it up! */
+            transform: scale(1.05) translateX(20px); 
         }
 
         .archive-item.active-text .tag {
@@ -142,6 +167,7 @@
             object-fit: cover;
             box-shadow: 0px 20px 40px rgba(0,0,0,0.1); 
             transform: translate(-50%, -50%) scale(1);
+            /* Animates both position and scaling dynamically */
             transition: top 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
                         left 0.6s cubic-bezier(0.25, 1, 0.5, 1),
                         transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
@@ -157,8 +183,7 @@
             .top-nav a { color: #000; }
             .nav-col { gap: 20px; justify-content: center; }
             
-            .archive-container { padding: 50vh 20px; }
-            .archive-list { width: 100%; gap: 15px; }
+            .archive-list { left: 20px; }
             .archive-item { font-size: 16px; }
             
             .archive-gallery { width: 100%; opacity: 0.3; } 
@@ -183,7 +208,9 @@
         </div>
     </nav>
 
-    <div class="archive-container">
+    <div class="scroll-track"></div>
+
+    <div class="archive-ui">
         <div class="archive-list">
             <div class="archive-item" data-target="project-1">
                 LUE.NE.COM <span class="tag">— WEB</span>
@@ -198,27 +225,25 @@
                 SPOTIFY <span class="tag">— PERSONAL</span>
             </div>
         </div>
-
-        <div class="archive-gallery">
-            <div class="gallery-group" id="project-1">
-                <img src="./assets/Edga_Styleframe_01.jpg" alt="LUE NE COM">
-            </div>
-            <div class="gallery-group" id="project-2">
-                <img src="./assets/carabiner_01.jpg" alt="carabiner">
-                <img src="./assets/carabiner_02.jpg" alt="carabiner">
-                <img src="./assets/carabiner_03.jpg" alt="carabiner">
-            </div>
-            <div class="gallery-group" id="project-3">
-                <img src="./assets/large3.webp" alt="digital anamorphosis">
-                <img src="./assets/img2.webp" alt="digital anamorphosis">
-            </div>
-            <div class="gallery-group" id="project-4">
-                <img src="./assets/Edga_Styleframe_01.jpg" alt="Spotify">
-            </div>
-        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
+    <div class="archive-gallery">
+        <div class="gallery-group" id="project-1">
+            <img src="./assets/Edga_Styleframe_01.jpg" alt="LUE NE COM">
+        </div>
+        <div class="gallery-group" id="project-2">
+            <img src="./assets/carabiner_01.jpg" alt="carabiner">
+            <img src="./assets/carabiner_02.jpg" alt="carabiner">
+            <img src="./assets/carabiner_03.jpg" alt="carabiner">
+        </div>
+        <div class="gallery-group" id="project-3">
+            <img src="./assets/large3.webp" alt="digital anamorphosis">
+            <img src="./assets/img2.webp" alt="digital anamorphosis">
+        </div>
+        <div class="gallery-group" id="project-4">
+            <img src="./assets/Edga_Styleframe_01.jpg" alt="Spotify">
+        </div>
+    </div>
 
     <script>
         const cursor = document.querySelector('.cursor');
@@ -274,60 +299,36 @@
     </script>
 
     <script>
-        let lenis;
-        try {
-            lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
-            function raf(time) {
-                lenis.raf(time);
-                updateScrollState(); 
-                requestAnimationFrame(raf);
-            }
-            requestAnimationFrame(raf);
-        } catch (e) {
-            console.log("Smooth scroll bypassed.");
-        }
-
+        const scrollTrack = document.querySelector('.scroll-track');
         const archiveListContainer = document.querySelector('.archive-list');
         const archiveItems = document.querySelectorAll('.archive-item');
         const galleryGroups = document.querySelectorAll('.gallery-group');
-        
-        let currentActiveItem = null;
-        let currentActiveId = null;
+        let currentIndex = -1;
+
+        // --- Init: Generate the Scroll Track dynamically ---
+        // This guarantees there is exactly one invisible 100vh block to snap to for every single project you add
+        archiveItems.forEach(() => {
+            const section = document.createElement('div');
+            section.classList.add('snap-section');
+            scrollTrack.appendChild(section);
+        });
 
         // --- Core Randomization Engine ---
         function randomizeImages(group) {
-            const listRect = archiveListContainer.getBoundingClientRect();
             const images = group.querySelectorAll('img');
+            const isMobile = window.innerWidth < 768;
             
             images.forEach((img, index) => {
-                let randomLeft, randomTop;
-                let isValid = false;
-                let attempts = 0;
-
-                // TWEAK 2: Reduced margins so images can push out to the extreme edges of the screen
-                const marginX = 2; 
-                const marginY = 5; 
-
-                while (!isValid && attempts < 50) {
-                    randomLeft = marginX + Math.random() * (100 - marginX * 2);
-                    randomTop = marginY + Math.random() * (100 - marginY * 2);
-
-                    const pxLeft = (randomLeft / 100) * window.innerWidth;
-                    const pxTop = (randomTop / 100) * window.innerHeight;
-
-                    // Reduced the collision buffer slightly to allow more breathing room for the images
-                    const isOverlappingList = 
-                        pxLeft < (listRect.right + 50) && 
-                        pxTop > (listRect.top - 50) && 
-                        pxTop < (listRect.bottom + 50);
-
-                    if (!isOverlappingList) {
-                        isValid = true;
-                    }
-                    attempts++;
-                }
-
-                const randomScale = 0.85 + Math.random() * 0.3;
+                // THE FIX: Strict bounding box. 
+                // Images spawn strictly between 35% and 85% width on desktop, avoiding the text list entirely!
+                const minX = isMobile ? 20 : 35; 
+                const spreadX = isMobile ? 60 : 50; 
+                
+                const randomLeft = minX + Math.random() * spreadX;
+                const randomTop = 15 + Math.random() * 70; // Between 15% and 85% height
+                
+                // THE FIX: Random scale offset added as requested (between 0.8 and 1.2)
+                const randomScale = 0.8 + Math.random() * 0.4;
 
                 img.style.left = `${randomLeft}%`;
                 img.style.top = `${randomTop}%`;
@@ -336,84 +337,46 @@
             });
         }
 
-        // --- Center-Screen Detection Engine ---
-        function updateScrollState() {
-            const centerY = window.innerHeight / 2;
-            let minDistance = Infinity;
-            let activeItem = null;
+        // --- Center-Screen Sync Engine ---
+        function updateScroll() {
+            // Calculate which project is active based on native scroll position
+            let newIndex = Math.round(window.scrollY / window.innerHeight);
+            
+            // Prevent going out of bounds
+            newIndex = Math.max(0, Math.min(newIndex, archiveItems.length - 1));
 
-            archiveItems.forEach(item => {
-                const rect = item.getBoundingClientRect();
-                const itemCenter = rect.top + rect.height / 2;
-                const distance = Math.abs(centerY - itemCenter);
-
-                // TWEAK 3: Greatly expanded the fadeThreshold so surrounding text stays visible
-                const fadeThreshold = window.innerHeight * 0.6;
-                const opacity = Math.max(0.2, 1 - (distance / fadeThreshold));
-                item.style.opacity = opacity;
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
                 
-                // Keep the cinematic push
-                const translateX = Math.max(0, 40 - (distance * 0.15));
-                item.style.transform = `translateX(${translateX}px)`;
+                // Reset all classes
+                archiveItems.forEach(i => i.classList.remove('active-text'));
+                galleryGroups.forEach(g => g.classList.remove('active'));
 
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    activeItem = item;
-                }
-            });
-
-            if (activeItem && activeItem !== currentActiveItem) {
-                currentActiveItem = activeItem;
+                // Activate the new current project
+                const activeItem = archiveItems[currentIndex];
+                activeItem.classList.add('active-text');
+                
                 const targetId = activeItem.getAttribute('data-target');
+                const targetGroup = document.getElementById(targetId);
                 
-                if (targetId !== currentActiveId) {
-                    currentActiveId = targetId;
-
-                    archiveItems.forEach(i => i.classList.remove('active-text'));
-                    galleryGroups.forEach(group => group.classList.remove('active'));
-                    
-                    activeItem.classList.add('active-text');
-                    
-                    const targetGroup = document.getElementById(targetId);
-                    if (targetGroup) {
-                        targetGroup.classList.add('active');
-                        randomizeImages(targetGroup);
-                    }
+                if (targetGroup) {
+                    targetGroup.classList.add('active');
+                    randomizeImages(targetGroup);
                 }
+
+                // THE FIX: Perfect Vertical Centering!
+                // Calculate the distance of the active item from the top of the list container,
+                // and translate the entire container UP by that exact amount.
+                const itemCenterY = activeItem.offsetTop + (activeItem.offsetHeight / 2);
+                archiveListContainer.style.transform = `translateY(-${itemCenterY}px)`;
             }
         }
 
-        // --- THE MAGNETIC SNAP ENGINE ---
-        let snapTimeout;
-        let isSnapping = false;
-
-        if (lenis) {
-            lenis.on('scroll', () => {
-                if (isSnapping) return; 
-
-                clearTimeout(snapTimeout);
-                
-                snapTimeout = setTimeout(() => {
-                    if (currentActiveItem) {
-                        isSnapping = true;
-                        
-                        const offset = -(window.innerHeight / 2) + (currentActiveItem.offsetHeight / 2);
-                        
-                        // TWEAK 4: Sped up the snap animation to match the tight list layout
-                        lenis.scrollTo(currentActiveItem, {
-                            offset: offset,
-                            duration: 0.4, 
-                            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
-                        });
-
-                        setTimeout(() => { isSnapping = false; }, 450);
-                    }
-                }, 120); 
-            });
-        }
-
-        // Force layout calculation on load
-        setTimeout(updateScrollState, 50);
+        // Listen for standard native scroll
+        window.addEventListener('scroll', updateScroll);
+        
+        // Force layout calculation on page load
+        updateScroll();
     </script>
 </body>
 </html>
