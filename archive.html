@@ -302,63 +302,78 @@
             scrollTrack.appendChild(section);
         });
 
-        // --- Core Randomization Engine with Collision Detection ---
+        // --- THE UPGRADED AABB COLLISION ENGINE ---
         function randomizeImages(group) {
             const images = group.querySelectorAll('img');
             const isMobile = window.innerWidth < 768;
             const listRect = archiveListContainer.getBoundingClientRect();
             
-            // Array to store the X, Y, and Scale of images we have successfully placed
-            const placedImages = [];
+            // We use the CSS maximum constraints to calculate mathematical bounds
+            const baseWidth = isMobile ? 200 : 350; 
+            const baseHeight = window.innerHeight * 0.45; 
+
+            // Array to store the exact Left, Right, Top, and Bottom pixels of placed images
+            const placedRects = [];
             
             images.forEach((img, index) => {
                 const minX = isMobile ? 20 : 35; 
                 const spreadX = isMobile ? 60 : 50; 
                 
                 let randomLeft, randomTop, randomScale, pxLeft, pxTop;
+                let imgRect;
                 let isValid = false;
                 
-                // Fail-safe limit: Try 100 times to find a safe spot, then just give up and place it.
+                // Increased attempts to 150 because Bounding Box math is stricter to solve
                 let attempts = 0; 
                 
-                while (!isValid && attempts < 100) {
+                while (!isValid && attempts < 150) {
                     randomLeft = minX + Math.random() * spreadX;
                     randomTop = 15 + Math.random() * 70; 
                     
-                    // NEW MORE EXTREME SCALE: Spawns between 0.85x and 1.65x
                     randomScale = 0.85 + Math.random() * 0.8;
 
-                    // Convert percentages to pixels for math checks
+                    // 1. Calculate physical center pixels
                     pxLeft = (randomLeft / 100) * window.innerWidth;
                     pxTop = (randomTop / 100) * window.innerHeight;
 
-                    // 1. Check Collision against the Text List
-                    const isOverlappingList = 
-                        pxLeft < (listRect.right + 50) && 
-                        pxTop > (listRect.top - 50) && 
-                        pxTop < (listRect.bottom + 50);
+                    // 2. Calculate the Scaled Bounding Box dimensions!
+                    const scaledWidth = baseWidth * randomScale;
+                    const scaledHeight = baseHeight * randomScale;
 
-                    // 2. Check Collision against "Neighbors" (Previously placed images)
+                    imgRect = {
+                        left: pxLeft - (scaledWidth / 2),
+                        right: pxLeft + (scaledWidth / 2),
+                        top: pxTop - (scaledHeight / 2),
+                        bottom: pxTop + (scaledHeight / 2)
+                    };
+
+                    // 3. Check Collision against the Text List
+                    const isOverlappingList = 
+                        imgRect.left < (listRect.right + 50) && 
+                        imgRect.bottom > (listRect.top - 50) && 
+                        imgRect.top < (listRect.bottom + 50);
+
+                    // 4. Check AABB Collision against "Neighbors"
                     let isOverlappingSibling = false;
                     
                     if (!isOverlappingList) {
-                        for (let sibling of placedImages) {
-                            // Pythagorean theorem to find the exact pixel distance between image centers
-                            const dx = pxLeft - sibling.x;
-                            const dy = pxTop - sibling.y;
-                            const distance = Math.sqrt(dx * dx + dy * dy);
+                        for (let sibling of placedRects) {
                             
-                            // Calculate a dynamic safe radius based on how big the images spawned
-                            const safeDistance = 180 * ((randomScale + sibling.scale) / 2);
+                            // Allowing the boxes to overlap by 15px so it feels organic, not like rigid Tetris blocks
+                            const allowance = 15; 
 
-                            if (distance < safeDistance) {
+                            // Mathematical AABB Intersection check
+                            if (!(imgRect.right - allowance < sibling.left || 
+                                  imgRect.left + allowance > sibling.right || 
+                                  imgRect.bottom - allowance < sibling.top || 
+                                  imgRect.top + allowance > sibling.bottom)) {
+                                
                                 isOverlappingSibling = true;
                                 break; 
                             }
                         }
                     }
 
-                    // If it clears both hurdles, mark as valid and exit the while-loop!
                     if (!isOverlappingList && !isOverlappingSibling) {
                         isValid = true;
                     }
@@ -366,8 +381,8 @@
                     attempts++;
                 }
 
-                // Log the final coordinates so the next image can avoid this one
-                placedImages.push({ x: pxLeft, y: pxTop, scale: randomScale });
+                // Log the final calculated bounds so the next image avoids it
+                placedRects.push(imgRect);
 
                 // Apply to the DOM
                 img.style.left = `${randomLeft}%`;
