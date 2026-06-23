@@ -15,11 +15,9 @@
             background-color: #ffffff; 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             overscroll-behavior: none; 
-            /* Hide the default cursor everywhere */
             cursor: none !important; 
         }
 
-        /* Force hide cursor on all interactive elements */
         a, button, input, canvas {
             cursor: none !important;
         }
@@ -31,12 +29,13 @@
             left: 0;
             width: 12px;
             height: 12px;
-            background-color: rgb(0, 0, 255); /* Your exact Blue */
+            background-color: rgb(0, 0, 255); 
             border-radius: 50%;
-            pointer-events: none; /* Let clicks pass through to the canvas/links */
+            pointer-events: none; 
             z-index: 99999;
             transform-origin: center center;
-            transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+            /* Removed CSS transition, animation is now handled purely in JS for 0 lag */
+            will-change: transform; 
         }
 
         /* --- Minimalist Header Layout --- */
@@ -68,7 +67,6 @@
             letter-spacing: 2px;
         }
 
-        /* --- Alignment Lock --- */
         .sync-grid {
             display: grid;
             grid-template-columns: 50% 50%; 
@@ -147,7 +145,7 @@
 
         /* --- Mobile Optimization --- */
         @media (max-width: 768px) {
-            .custom-cursor { display: none; /* Disable JS cursor on mobile */ }
+            .custom-cursor { display: none; }
             html, body, a, button, canvas { cursor: auto !important; }
             .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
             .nav-col { gap: 20px; justify-content: center !important; }
@@ -245,27 +243,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
 
     <script>
-        // Custom Cursor Logic
-        const cursor = document.getElementById('custom-cursor');
-        let mouseX = window.innerWidth / 2;
-        let mouseY = window.innerHeight / 2;
-
-        window.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            // Update position immediately for zero latency
-            cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(1)`;
-        });
-
-        window.addEventListener('mousedown', () => {
-            cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(0.6)`;
-        });
-
-        window.addEventListener('mouseup', () => {
-            cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(1)`;
-        });
-
-        // UI Scramble Links
         const letters = "ABCDEFGHJKLNPRSTVXYZ0123456789#&*";
         const allLinks = document.querySelectorAll('.top-nav a, .site-footer a');
         allLinks.forEach(link => {
@@ -293,13 +270,26 @@
             });
         });
 
-        // Smooth Scrolling
         const lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
-        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-        requestAnimationFrame(raf);
+        // Removed the raf request from here, it is now safely bundled in the master WebGL loop below.
     </script>
 
     <script>
+        // --- 0. HIGH-PERFORMANCE CURSOR STATE ---
+        const cursor = document.getElementById('custom-cursor');
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let targetCursorScale = 1;
+        let currentCursorScale = 1;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        window.addEventListener('mousedown', () => targetCursorScale = 0.5);
+        window.addEventListener('mouseup', () => targetCursorScale = 1);
+
+
         // ==========================================
         // 1. HERO PARTICLES SETUP 
         // ==========================================
@@ -342,6 +332,7 @@
             sprites.push(sprite);
         }
 
+
         // ==========================================
         // 2. RAGDOLL ABOUT SECTION SETUP 
         // ==========================================
@@ -349,17 +340,12 @@
         let ragdollGroup, mixBones = {}; 
         const aboutCanvas = document.getElementById('ragdoll-canvas');
         
-        // --- Smart Interaction Variables ---
         const isDesktop = window.matchMedia("(pointer: fine)").matches; 
         let isDragging = false;
         let dragPlane = new THREE.Plane();
         let dragIntersection = new THREE.Vector3();
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
-
-        // Cannon.js constraints variables
-        let mouseConstraintBody;
-        let mouseConstraint = null;
 
         const instructionText = document.querySelector('.about-text-box .instruction');
         if (instructionText) {
@@ -394,19 +380,16 @@
             floorMesh.receiveShadow = true;
             sceneRagdoll.add(floorMesh);
 
-            // Setup Cannon.js World
             world = new CANNON.World();
             world.gravity.set(0, -9.82, 0);
             world.broadphase = new CANNON.NaiveBroadphase();
             world.solver.iterations = 10; 
 
-            // Physics Floor
             const floorBody = new CANNON.Body({ mass: 0 }); 
             floorBody.addShape(new CANNON.Plane());
             floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
             world.addBody(floorBody);
 
-            // Torso Body
             const torsoShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.8, 0.5)); 
             torsoBody = new CANNON.Body({
                 mass: 5,
@@ -417,12 +400,15 @@
             torsoBody.addShape(torsoShape);
             world.addBody(torsoBody);
 
-            // Kinematic body that follows the mouse to pull the character
-            mouseConstraintBody = new CANNON.Body({ mass: 0 });
-            world.addBody(mouseConstraintBody);
-
             ragdollGroup = new THREE.Group();
             sceneRagdoll.add(ragdollGroup);
+
+            // THE FIX: Massive Invisible Hitbox for perfect clicking
+            const hitGeo = new THREE.BoxGeometry(2, 3.5, 2);
+            const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+            const hitboxMesh = new THREE.Mesh(hitGeo, hitMat);
+            hitboxMesh.name = "dragHitbox";
+            ragdollGroup.add(hitboxMesh);
 
             const loader = new THREE.GLTFLoader();
             loader.load('./assets/simon-ps1.glb', (gltf) => {
@@ -442,44 +428,34 @@
                 ragdollGroup.add(characterRoot);
             });
 
-            // --- FLAWLESS CONSTRAINT DRAGGING LOGIC ---
+            // --- BULLETPROOF VELOCITY DRAG MECHANICS ---
             window.addEventListener('pointerdown', (e) => {
                 const rect = aboutCanvas.getBoundingClientRect();
                 if (rect.top < window.innerHeight && rect.bottom > 0 && torsoBody) {
+                    
+                    // Force clean viewport coordinates
                     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+                    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
                     
                     raycaster.setFromCamera(mouse, cameraRagdoll);
                     
-                    // We only want to drag the character, not the floor
+                    // Raycast against the group (which now includes the massive invisible hitbox)
                     const intersects = raycaster.intersectObjects(ragdollGroup.children, true);
                     
                     if (intersects.length > 0) {
                         if (isDesktop) {
-                            // 1. Mark as dragging
                             isDragging = true;
                             torsoBody.wakeUp();
-
-                            // 2. Position the invisible mouse physics body exactly where we clicked
-                            mouseConstraintBody.position.copy(intersects[0].point);
-
-                            // 3. Create a physical "spring/rubber band" constraint to pull him
-                            // Center pivot ensures he tumbles naturally without snapping his neck
-                            mouseConstraint = new CANNON.PointToPointConstraint(
-                                torsoBody, 
-                                new CANNON.Vec3(0,0,0), 
-                                mouseConstraintBody, 
-                                new CANNON.Vec3(0,0,0)
-                            );
-                            world.addConstraint(mouseConstraint);
-
-                            // 4. Create an invisible mathematical plane facing the camera to drag against
+                            
+                            // Setup our invisible dragging plane at exactly the character's depth
                             dragPlane.setFromNormalAndCoplanarPoint(
                                 cameraRagdoll.getWorldDirection(new THREE.Vector3()),
-                                intersects[0].point
+                                ragdollGroup.position
                             );
+                            
+                            // Immediately capture the first intersection point
+                            raycaster.ray.intersectPlane(dragPlane, dragIntersection);
                         } else {
-                            // Mobile poke
                             const randomX = (Math.random() - 0.5) * 25;
                             const randomZ = (Math.random() - 0.5) * 25;
                             torsoBody.applyImpulse(new CANNON.Vec3(randomX, 45, randomZ), torsoBody.position);
@@ -489,33 +465,27 @@
             });
 
             window.addEventListener('pointermove', (e) => {
-                if (!isDragging || !isDesktop || !mouseConstraint) return;
+                if (!isDragging || !isDesktop) return;
                 
-                const rect = aboutCanvas.getBoundingClientRect();
                 mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
                 
-                // Find where the mouse intersects our invisible drag plane
                 raycaster.setFromCamera(mouse, cameraRagdoll);
-                raycaster.ray.intersectPlane(dragPlane, dragIntersection);
-                
-                // Move the invisible physics body. The constraint will pull the torso behind it!
-                mouseConstraintBody.position.set(dragIntersection.x, dragIntersection.y, dragIntersection.z);
+                // Keep updating where the mouse is pointing on the invisible plane
+                if(raycaster.ray.intersectPlane(dragPlane, dragIntersection)) {
+                    torsoBody.wakeUp();
+                }
             });
 
             window.addEventListener('pointerup', () => {
-                if (mouseConstraint) {
-                    // Let go of the rubber band
-                    world.removeConstraint(mouseConstraint);
-                    mouseConstraint = null;
-                }
                 isDragging = false;
             });
             
         } catch (error) { console.error("Ragdoll setup failed", error); }
 
+
         // ==========================================
-        // 3. GLOBAL RESIZE & ANIMATION LOOP
+        // 3. MASTER ANIMATION LOOP
         // ==========================================
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -536,10 +506,17 @@
         let isAutoScrolling = false; 
         const timeStep = 1 / 60;
 
-        function animate() {
+        function animate(time) {
             requestAnimationFrame(animate);
 
-            // --- HERO SCENE ---
+            // 1. Sync Lenis Smooth Scroll
+            lenis.raf(time);
+
+            // 2. Sync Custom Cursor (Zero DOM Lag Approach)
+            currentCursorScale += (targetCursorScale - currentCursorScale) * 0.3; // Easing
+            cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(${currentCursorScale})`;
+
+            // 3. Hero Particles
             try {
                 sprites.forEach(sprite => {
                     sprite.position.add(sprite.userData.velocity);
@@ -548,8 +525,6 @@
                     if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
                 });
 
-                // --- SMART SCROLL CUE ---
-                // Triggers when you scroll past 30% of the Hero
                 if (window.scrollY > window.innerHeight * 0.3 && window.scrollY < window.innerHeight && !isAutoScrolling) {
                     isAutoScrolling = true; 
                     lenis.scrollTo(targetSection, { duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
@@ -566,34 +541,43 @@
                 renderer.render(scene, camera);
             } catch (error) {}
 
-            // --- RAGDOLL SCENE (CONSTRAINT PHYSICS & FLOPPINESS) ---
+            // 4. Ragdoll Physics & Drag Rubber-Banding
             try {
                 if (world && rendererRagdoll) {
                     const aboutRect = aboutCanvas.getBoundingClientRect();
                     if (aboutRect.top < window.innerHeight && aboutRect.bottom > 0) {
+                        
+                        // Apply Velocity if dragging
+                        if (isDragging && torsoBody) {
+                            // Calculate vector from character to mouse
+                            const pullForce = new CANNON.Vec3(
+                                dragIntersection.x - torsoBody.position.x,
+                                dragIntersection.y - torsoBody.position.y,
+                                dragIntersection.z - torsoBody.position.z
+                            );
+                            // Multiply by stiffness (acts like a rubber band)
+                            torsoBody.velocity.set(pullForce.x * 8, pullForce.y * 8, pullForce.z * 8);
+                        }
+
                         world.step(timeStep);
                         
                         if (ragdollGroup && torsoBody) {
-                            
                             ragdollGroup.position.copy(torsoBody.position);
                             ragdollGroup.quaternion.copy(torsoBody.quaternion);
 
+                            // Procedural Flop
                             const vel = torsoBody.velocity;
                             const speed = vel.length();
                             const flop = 0.12; 
 
                             if (speed > 0.1) {
                                 if (mixBones.mixamorigLeftArm) {
-                                    let targetZ = -1.2 + Math.min(1.5, vel.y * 0.15); 
-                                    let targetX = vel.z * 0.1;
-                                    mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, targetZ, flop);
-                                    mixBones.mixamorigLeftArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.x, targetX, flop);
+                                    mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2 + Math.min(1.5, vel.y * 0.15), flop);
+                                    mixBones.mixamorigLeftArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.x, vel.z * 0.1, flop);
                                 }
                                 if (mixBones.mixamorigRightArm) {
-                                    let targetZ = 1.2 - Math.min(1.5, vel.y * 0.15); 
-                                    let targetX = vel.z * 0.1;
-                                    mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, targetZ, flop);
-                                    mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, targetX, flop);
+                                    mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2 - Math.min(1.5, vel.y * 0.15), flop);
+                                    mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, vel.z * 0.1, flop);
                                 }
                                 if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
                                 if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
@@ -618,7 +602,8 @@
             } catch (error) {}
         }
 
-        animate();
+        // Boot
+        requestAnimationFrame(animate);
     </script>
 </body>
 </html>
