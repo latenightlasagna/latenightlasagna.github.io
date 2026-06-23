@@ -8,18 +8,13 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='rgb(0,0,255)'/></svg>">
     
     <style>
-        /* --- Core Styling & Global Cursor Hide --- */
+        /* --- Core Styling --- */
         html, body { 
             margin: 0; 
             padding: 0;
             background-color: #ffffff; 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             overscroll-behavior: none; 
-            cursor: none !important; 
-        }
-
-        a, button, input, canvas {
-            cursor: none !important;
         }
 
         /* --- THE CUSTOM CURSOR --- */
@@ -34,8 +29,13 @@
             pointer-events: none; 
             z-index: 99999;
             transform-origin: center center;
-            /* Removed CSS transition, animation is now handled purely in JS for 0 lag */
-            will-change: transform; 
+            opacity: 0; /* Hidden by default */
+            will-change: transform, opacity; 
+            transition: opacity 0.3s ease; /* Smooth fade in/out */
+        }
+
+        .custom-cursor.visible {
+            opacity: 1; /* Triggered only in the About Section */
         }
 
         /* --- Minimalist Header Layout --- */
@@ -99,6 +99,12 @@
             box-sizing: border-box;
             overflow: hidden;
             z-index: 5;
+            cursor: none !important; /* Force hide normal cursor ONLY here */
+        }
+        
+        /* Hide cursor on inner elements of the about section to prevent flickering */
+        #about-section * {
+            cursor: none !important;
         }
 
         #ragdoll-canvas {
@@ -146,7 +152,7 @@
         /* --- Mobile Optimization --- */
         @media (max-width: 768px) {
             .custom-cursor { display: none; }
-            html, body, a, button, canvas { cursor: auto !important; }
+            #about-section, #about-section * { cursor: auto !important; }
             .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
             .nav-col { gap: 20px; justify-content: center !important; }
             .sync-grid { width: 100%; display: flex; justify-content: space-around; }
@@ -271,12 +277,12 @@
         });
 
         const lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
-        // Removed the raf request from here, it is now safely bundled in the master WebGL loop below.
     </script>
 
     <script>
-        // --- 0. HIGH-PERFORMANCE CURSOR STATE ---
+        // --- 0. SCOPED CURSOR ENGINE ---
         const cursor = document.getElementById('custom-cursor');
+        const aboutSectionElement = document.getElementById('about-section');
         let mouseX = window.innerWidth / 2;
         let mouseY = window.innerHeight / 2;
         let targetCursorScale = 1;
@@ -286,8 +292,14 @@
             mouseX = e.clientX;
             mouseY = e.clientY;
         });
-        window.addEventListener('mousedown', () => targetCursorScale = 0.5);
+        
+        // Only scale down if interacting within the about section
+        aboutSectionElement.addEventListener('mousedown', () => targetCursorScale = 0.5);
         window.addEventListener('mouseup', () => targetCursorScale = 1);
+
+        // Toggle visibility based on hover bounds
+        aboutSectionElement.addEventListener('mouseenter', () => cursor.classList.add('visible'));
+        aboutSectionElement.addEventListener('mouseleave', () => cursor.classList.remove('visible'));
 
 
         // ==========================================
@@ -395,7 +407,7 @@
                 mass: 5,
                 position: new CANNON.Vec3(-2, 8, 0), 
                 linearDamping: 0.1,
-                angularDamping: 0.3 
+                angularDamping: 0.15 // EVEN LOWER DAMPING = WILDER FLIP & SPIN
             });
             torsoBody.addShape(torsoShape);
             world.addBody(torsoBody);
@@ -403,7 +415,6 @@
             ragdollGroup = new THREE.Group();
             sceneRagdoll.add(ragdollGroup);
 
-            // THE FIX: Massive Invisible Hitbox for perfect clicking
             const hitGeo = new THREE.BoxGeometry(2, 3.5, 2);
             const hitMat = new THREE.MeshBasicMaterial({ visible: false });
             const hitboxMesh = new THREE.Mesh(hitGeo, hitMat);
@@ -428,18 +439,14 @@
                 ragdollGroup.add(characterRoot);
             });
 
-            // --- BULLETPROOF VELOCITY DRAG MECHANICS ---
             window.addEventListener('pointerdown', (e) => {
                 const rect = aboutCanvas.getBoundingClientRect();
                 if (rect.top < window.innerHeight && rect.bottom > 0 && torsoBody) {
                     
-                    // Force clean viewport coordinates
                     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
                     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
                     
                     raycaster.setFromCamera(mouse, cameraRagdoll);
-                    
-                    // Raycast against the group (which now includes the massive invisible hitbox)
                     const intersects = raycaster.intersectObjects(ragdollGroup.children, true);
                     
                     if (intersects.length > 0) {
@@ -447,13 +454,11 @@
                             isDragging = true;
                             torsoBody.wakeUp();
                             
-                            // Setup our invisible dragging plane at exactly the character's depth
                             dragPlane.setFromNormalAndCoplanarPoint(
                                 cameraRagdoll.getWorldDirection(new THREE.Vector3()),
                                 ragdollGroup.position
                             );
                             
-                            // Immediately capture the first intersection point
                             raycaster.ray.intersectPlane(dragPlane, dragIntersection);
                         } else {
                             const randomX = (Math.random() - 0.5) * 25;
@@ -471,7 +476,6 @@
                 mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
                 
                 raycaster.setFromCamera(mouse, cameraRagdoll);
-                // Keep updating where the mouse is pointing on the invisible plane
                 if(raycaster.ray.intersectPlane(dragPlane, dragIntersection)) {
                     torsoBody.wakeUp();
                 }
@@ -503,7 +507,7 @@
 
         const scrollTrack = document.querySelector('.hero-scroll-track');
         const targetSection = document.getElementById('about-section'); 
-        let isAutoScrolling = false; 
+        let snapMemory = false; 
         const timeStep = 1 / 60;
 
         function animate(time) {
@@ -512,11 +516,11 @@
             // 1. Sync Lenis Smooth Scroll
             lenis.raf(time);
 
-            // 2. Sync Custom Cursor (Zero DOM Lag Approach)
-            currentCursorScale += (targetCursorScale - currentCursorScale) * 0.3; // Easing
+            // 2. Sync Custom Cursor
+            currentCursorScale += (targetCursorScale - currentCursorScale) * 0.3; 
             cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(${currentCursorScale})`;
 
-            // 3. Hero Particles
+            // 3. Hero Particles & Smooth Magnetic Scroll
             try {
                 sprites.forEach(sprite => {
                     sprite.position.add(sprite.userData.velocity);
@@ -525,11 +529,17 @@
                     if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
                 });
 
-                if (window.scrollY > window.innerHeight * 0.3 && window.scrollY < window.innerHeight && !isAutoScrolling) {
-                    isAutoScrolling = true; 
-                    lenis.scrollTo(targetSection, { duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+                // ORGANIC MAGNETIC SCROLL: Triggers once when you hit 25% down the page. 
+                // Uses Quartic Out easing for a soft, un-forced "lock in" feeling.
+                if (window.scrollY > window.innerHeight * 0.25 && window.scrollY < window.innerHeight * 0.8 && !snapMemory) {
+                    snapMemory = true; 
+                    lenis.scrollTo(targetSection, { 
+                        duration: 1.8, 
+                        easing: (t) => 1 - Math.pow(1 - t, 4) 
+                    });
                 }
-                if (window.scrollY < 10) { isAutoScrolling = false; } 
+                // Resets memory if user scrolls back to the very top
+                if (window.scrollY < 10) { snapMemory = false; } 
 
                 controls.update(); 
                 camera.quaternion.copy(trackballDummy.quaternion);
@@ -541,21 +551,18 @@
                 renderer.render(scene, camera);
             } catch (error) {}
 
-            // 4. Ragdoll Physics & Drag Rubber-Banding
+            // 4. Ragdoll Physics & MAXIMUM FLOPPINESS
             try {
                 if (world && rendererRagdoll) {
                     const aboutRect = aboutCanvas.getBoundingClientRect();
                     if (aboutRect.top < window.innerHeight && aboutRect.bottom > 0) {
                         
-                        // Apply Velocity if dragging
                         if (isDragging && torsoBody) {
-                            // Calculate vector from character to mouse
                             const pullForce = new CANNON.Vec3(
                                 dragIntersection.x - torsoBody.position.x,
                                 dragIntersection.y - torsoBody.position.y,
                                 dragIntersection.z - torsoBody.position.z
                             );
-                            // Multiply by stiffness (acts like a rubber band)
                             torsoBody.velocity.set(pullForce.x * 8, pullForce.y * 8, pullForce.z * 8);
                         }
 
@@ -565,12 +572,12 @@
                             ragdollGroup.position.copy(torsoBody.position);
                             ragdollGroup.quaternion.copy(torsoBody.quaternion);
 
-                            // Procedural Flop
                             const vel = torsoBody.velocity;
                             const speed = vel.length();
                             const flop = 0.12; 
 
                             if (speed > 0.1) {
+                                // ARMS
                                 if (mixBones.mixamorigLeftArm) {
                                     mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2 + Math.min(1.5, vel.y * 0.15), flop);
                                     mixBones.mixamorigLeftArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.x, vel.z * 0.1, flop);
@@ -579,19 +586,32 @@
                                     mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2 - Math.min(1.5, vel.y * 0.15), flop);
                                     mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, vel.z * 0.1, flop);
                                 }
-                                if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
-                                if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
+
+                                // EXTRA FLOP: HIPS & THIGHS (Wider range based on drag direction)
+                                if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-1.2, vel.z * 0.15), flop);
+                                if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-1.2, vel.z * 0.15), flop);
+
+                                // EXTRA FLOP: KNEES (Buckle backward when flying up, straighten when falling down)
+                                if (mixBones.mixamorigLeftLeg) mixBones.mixamorigLeftLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftLeg.rotation.x, Math.max(0, vel.y * 0.2), flop);
+                                if (mixBones.mixamorigRightLeg) mixBones.mixamorigRightLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightLeg.rotation.x, Math.max(0, vel.y * 0.2), flop);
+
+                                // EXTRA FLOP: SPINE WHIPLASH
                                 if (mixBones.mixamorigSpine) {
-                                    mixBones.mixamorigSpine.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.x, vel.z * 0.05, flop);
-                                    mixBones.mixamorigSpine.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.z, -vel.x * 0.05, flop);
+                                    mixBones.mixamorigSpine.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.x, vel.z * 0.1, flop);
+                                    mixBones.mixamorigSpine.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.z, -vel.x * 0.1, flop);
                                 }
                                 if (mixBones.mixamorigHead) {
-                                    mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, torsoBody.angularVelocity.x * 0.15, flop);
-                                    mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.15, flop);
+                                    mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, torsoBody.angularVelocity.x * 0.2, flop);
+                                    mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.2, flop);
                                 }
                             } else {
+                                // Rest back to default standing T-pose/slump
                                 if (mixBones.mixamorigLeftArm) mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2, 0.05);
                                 if (mixBones.mixamorigRightArm) mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2, 0.05);
+                                if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, 0, 0.05);
+                                if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, 0, 0.05);
+                                if (mixBones.mixamorigLeftLeg) mixBones.mixamorigLeftLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftLeg.rotation.x, 0, 0.05);
+                                if (mixBones.mixamorigRightLeg) mixBones.mixamorigRightLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightLeg.rotation.x, 0, 0.05);
                                 if (mixBones.mixamorigSpine) mixBones.mixamorigSpine.rotation.set(0,0,0);
                                 if (mixBones.mixamorigHead) mixBones.mixamorigHead.rotation.set(0,0,0);
                             }
