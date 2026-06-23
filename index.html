@@ -526,7 +526,9 @@
         // ==========================================
         // 2. RAGDOLL ABOUT SECTION SETUP 
         // ==========================================
-        let world, torsoBody, sceneRagdoll, cameraRagdoll, rendererRagdoll, characterRoot;
+        let world, torsoBody, sceneRagdoll, cameraRagdoll, rendererRagdoll;
+        let ragdollGroup, mixBones = {}; 
+        
         const aboutCanvas = document.getElementById('ragdoll-canvas');
         
         try {
@@ -559,19 +561,18 @@
             floorMesh.receiveShadow = true;
             sceneRagdoll.add(floorMesh);
 
-            // Cannon.js Physics World (Updated to strict older syntax)
+            // Cannon.js Physics World
             world = new CANNON.World();
             world.gravity.set(0, -9.82, 0);
             world.broadphase = new CANNON.NaiveBroadphase();
             world.solver.iterations = 10; 
 
-            // mass: 0 is the stable way to create static bodies in vanilla cannon.js
             const floorBody = new CANNON.Body({ mass: 0 }); 
             floorBody.addShape(new CANNON.Plane());
             floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
             world.addBody(floorBody);
 
-            // The bounding box for your falling character
+            // The bounding box (Half-extents: 0.5, 0.8, 0.5 means full height is 1.6)
             const torsoShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.8, 0.5)); 
             torsoBody = new CANNON.Body({
                 mass: 5,
@@ -582,10 +583,19 @@
             torsoBody.addShape(torsoShape);
             world.addBody(torsoBody);
 
+            // THE FIX: Group wrapper for position offsetting
+            ragdollGroup = new THREE.Group();
+            sceneRagdoll.add(ragdollGroup);
+
             // GLTF Loading
             const loader = new THREE.GLTFLoader();
             loader.load('./assets/simon-ps1.glb', (gltf) => {
-                characterRoot = gltf.scene;
+                const characterRoot = gltf.scene;
+                
+                // Offset the character downwards inside the group so the feet touch the floor
+                // If it still floats slightly, change this to -0.85 or -0.9
+                characterRoot.position.set(0, -0.8, 0); 
+                
                 characterRoot.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
@@ -595,10 +605,15 @@
                             child.material.map.minFilter = THREE.NearestFilter;
                         }
                     }
+                    // Save specific Mixamo bones for our procedural ragdoll
+                    if (child.isBone) {
+                        mixBones[child.name] = child;
+                    }
                 });
-                sceneRagdoll.add(characterRoot);
+                
+                ragdollGroup.add(characterRoot);
             }, undefined, (error) => {
-                console.warn("Model didn't load yet. Ignore if testing locally.", error);
+                console.warn("Model didn't load yet.", error);
             });
 
             // Interactive "Poke" Mechanic
@@ -615,15 +630,16 @@
                     const intersects = raycaster.intersectObjects(sceneRagdoll.children, true);
                     
                     if (intersects.length > 0) {
-                        const randomX = (Math.random() - 0.5) * 20;
-                        const randomZ = (Math.random() - 0.5) * 20;
-                        torsoBody.applyImpulse(new CANNON.Vec3(randomX, 35, randomZ), torsoBody.position);
+                        const randomX = (Math.random() - 0.5) * 25;
+                        const randomZ = (Math.random() - 0.5) * 25;
+                        // Increased Y impulse for a stronger toss
+                        torsoBody.applyImpulse(new CANNON.Vec3(randomX, 45, randomZ), torsoBody.position);
                     }
                 }
             });
             
         } catch (error) {
-            console.error("Ragdoll setup failed, but Hero will continue running safely.", error);
+            console.error("Ragdoll setup failed", error);
         }
 
         // ==========================================
@@ -651,7 +667,7 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // --- HERO SCENE (Decoupled & Bulletproof) ---
+            // --- HERO SCENE ---
             try {
                 sprites.forEach(sprite => {
                     sprite.position.add(sprite.userData.velocity);
@@ -676,29 +692,53 @@
                 camera.position.copy(trackballDummy.position).add(forwardVector.multiplyScalar(scrollProgress * 150));
 
                 renderer.render(scene, camera);
-            } catch (error) {
-                console.error("Hero render loop error:", error);
-            }
+            } catch (error) {}
 
-            // --- RAGDOLL SCENE (Only runs if Cannon.js loaded properly) ---
+            // --- RAGDOLL SCENE & PROCEDURAL FLAIL ---
             try {
                 if (world && rendererRagdoll) {
                     const aboutRect = aboutCanvas.getBoundingClientRect();
                     if (aboutRect.top < window.innerHeight && aboutRect.bottom > 0) {
                         world.step(timeStep);
-                        if (characterRoot && torsoBody) {
-                            characterRoot.position.copy(torsoBody.position);
-                            characterRoot.quaternion.copy(torsoBody.quaternion);
+                        
+                        if (ragdollGroup && torsoBody) {
+                            // Sync the Group wrapper to the physics box
+                            ragdollGroup.position.copy(torsoBody.position);
+                            ragdollGroup.quaternion.copy(torsoBody.quaternion);
+
+                            // --- The Procedural Ragdoll Magic ---
+                            // Calculate how fast the body is moving
+                            const speed = torsoBody.velocity.length();
+                            // Limit the maximum flail angle so limbs don't spin 360 degrees
+                            const flail = Math.min(speed * 0.08, Math.PI / 2); 
+                            
+                            // Relax the T-Pose (-1.2 radians puts arms at sides) and add flail physics
+                            if (mixBones.mixamorigLeftArm) {
+                                mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2 + flail, 0.15);
+                            }
+                            if (mixBones.mixamorigRightArm) {
+                                mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2 - flail, 0.15);
+                            }
+                            // Kick legs slightly when flying
+                            if (mixBones.mixamorigLeftUpLeg) {
+                                mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, flail * 0.5, 0.15);
+                            }
+                            if (mixBones.mixamorigRightUpLeg) {
+                                mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, -flail * 0.5, 0.15);
+                            }
+                            // Bobble the head based on rotational velocity
+                            if (mixBones.mixamorigHead) {
+                                mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, torsoBody.angularVelocity.x * 0.1, 0.2);
+                                mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.1, 0.2);
+                            }
                         }
                         rendererRagdoll.render(sceneRagdoll, cameraRagdoll);
                     }
                 }
-            } catch (error) {
-                // Fails silently in the background
-            }
+            } catch (error) {}
         }
 
-        animate();
+        animate();    
     </script>
 </body>
 </html>
