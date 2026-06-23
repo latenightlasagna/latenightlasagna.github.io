@@ -468,7 +468,7 @@
 
     <script>
         // ==========================================
-        // 1. HERO PARTICLES SETUP (Always runs safely)
+        // 1. HERO PARTICLES SETUP 
         // ==========================================
         const container = document.getElementById('webgl-container');
         const scene = new THREE.Scene();
@@ -496,29 +496,15 @@
         const IMAGE_COUNT = window.innerWidth < 768 ? 35 : 100;
         const sprites = [];
         const textureLoader = new THREE.TextureLoader();
-        const imagePaths = [
-            './assets/Edga_Styleframe_01.jpg',
-            './assets/fuzzyFlower.jpg',
-            './assets/grainytape.jpg'
-        ];
+        const imagePaths = ['./assets/Edga_Styleframe_01.jpg', './assets/fuzzyFlower.jpg', './assets/grainytape.jpg'];
 
         for (let i = 0; i < IMAGE_COUNT; i++) {
-            const imagePath = imagePaths[i % imagePaths.length];
-            const texture = textureLoader.load(imagePath);
+            const texture = textureLoader.load(imagePaths[i % imagePaths.length]);
             const material = new THREE.SpriteMaterial({ map: texture });
             const sprite = new THREE.Sprite(material);
-            
-            sprite.position.set(
-                (Math.random() - 0.5) * 120,
-                (Math.random() - 0.5) * 120,
-                (Math.random() - 0.5) * 120
-            );
+            sprite.position.set((Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120);
             sprite.scale.set(5, 5, 1);
-            sprite.userData.velocity = new THREE.Vector3(
-                (Math.random() - 0.5) * 0.02,
-                (Math.random() - 0.5) * 0.02,
-                (Math.random() - 0.5) * 0.02
-            );
+            sprite.userData.velocity = new THREE.Vector3((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.02);
             particleGroup.add(sprite);
             sprites.push(sprite);
         }
@@ -530,6 +516,21 @@
         let ragdollGroup, mixBones = {}; 
         
         const aboutCanvas = document.getElementById('ragdoll-canvas');
+        
+        // --- Smart Interaction Variables ---
+        // Detects if user has a precise mouse (desktop) vs touch (mobile)
+        const isDesktop = window.matchMedia("(pointer: fine)").matches; 
+        let isDragging = false;
+        let dragPlane = new THREE.Plane();
+        let dragIntersection = new THREE.Vector3();
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+
+        // Update the instruction text based on device
+        const instructionText = document.querySelector('.about-text-box .instruction');
+        if (instructionText) {
+            instructionText.innerText = isDesktop ? "DRAG TO THROW ME AROUND." : "TAP TO POKE ME.";
+        }
         
         try {
             sceneRagdoll = new THREE.Scene();
@@ -553,7 +554,6 @@
             rendererRagdoll.shadowMap.enabled = true;
             rendererRagdoll.shadowMap.type = THREE.PCFSoftShadowMap;
 
-            // Invisible Shadow Catcher
             const floorGeometry = new THREE.PlaneGeometry(100, 100);
             const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 }); 
             const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -561,7 +561,6 @@
             floorMesh.receiveShadow = true;
             sceneRagdoll.add(floorMesh);
 
-            // Cannon.js Physics World
             world = new CANNON.World();
             world.gravity.set(0, -9.82, 0);
             world.broadphase = new CANNON.NaiveBroadphase();
@@ -572,28 +571,22 @@
             floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
             world.addBody(floorBody);
 
-            // The bounding box (Half-extents: 0.5, 0.8, 0.5 means full height is 1.6)
             const torsoShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.8, 0.5)); 
             torsoBody = new CANNON.Body({
                 mass: 5,
                 position: new CANNON.Vec3(-2, 8, 0), 
                 linearDamping: 0.1,
-                angularDamping: 0.8 
+                angularDamping: 0.3 // LOWER DAMPING = MORE TUMBLING/FLOPPING
             });
             torsoBody.addShape(torsoShape);
             world.addBody(torsoBody);
 
-            // THE FIX: Group wrapper for position offsetting
             ragdollGroup = new THREE.Group();
             sceneRagdoll.add(ragdollGroup);
 
-            // GLTF Loading
             const loader = new THREE.GLTFLoader();
             loader.load('./assets/simon-ps1.glb', (gltf) => {
                 const characterRoot = gltf.scene;
-                
-                // Offset the character downwards inside the group so the feet touch the floor
-                // If it still floats slightly, change this to -0.85 or -0.9
                 characterRoot.position.set(0, -0.8, 0); 
                 
                 characterRoot.traverse((child) => {
@@ -605,42 +598,60 @@
                             child.material.map.minFilter = THREE.NearestFilter;
                         }
                     }
-                    // Save specific Mixamo bones for our procedural ragdoll
-                    if (child.isBone) {
-                        mixBones[child.name] = child;
-                    }
+                    if (child.isBone) { mixBones[child.name] = child; }
                 });
-                
                 ragdollGroup.add(characterRoot);
-            }, undefined, (error) => {
-                console.warn("Model didn't load yet.", error);
             });
 
-            // Interactive "Poke" Mechanic
-            const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
-            
-            window.addEventListener('click', (event) => {
+            // --- Desktop Drag & Mobile Poke Event Listeners ---
+            window.addEventListener('pointerdown', (e) => {
                 const rect = aboutCanvas.getBoundingClientRect();
                 if (rect.top < window.innerHeight && rect.bottom > 0 && torsoBody) {
-                    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
                     
                     raycaster.setFromCamera(mouse, cameraRagdoll);
                     const intersects = raycaster.intersectObjects(sceneRagdoll.children, true);
                     
-                    if (intersects.length > 0) {
-                        const randomX = (Math.random() - 0.5) * 25;
-                        const randomZ = (Math.random() - 0.5) * 25;
-                        // Increased Y impulse for a stronger toss
-                        torsoBody.applyImpulse(new CANNON.Vec3(randomX, 45, randomZ), torsoBody.position);
+                    if (intersects.length > 0 && intersects[0].object !== floorMesh) {
+                        if (isDesktop) {
+                            // DESKTOP: Start dragging
+                            isDragging = true;
+                            aboutCanvas.style.cursor = 'grabbing';
+                            // Create an invisible mathematical plane facing camera at the object's depth
+                            dragPlane.setFromNormalAndCoplanarPoint(
+                                cameraRagdoll.getWorldDirection(new THREE.Vector3()),
+                                ragdollGroup.position
+                            );
+                        } else {
+                            // MOBILE: Poke mechanics
+                            const randomX = (Math.random() - 0.5) * 25;
+                            const randomZ = (Math.random() - 0.5) * 25;
+                            torsoBody.applyImpulse(new CANNON.Vec3(randomX, 45, randomZ), torsoBody.position);
+                        }
                     }
                 }
             });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!isDragging || !isDesktop) return;
+                const rect = aboutCanvas.getBoundingClientRect();
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                // Find where the mouse intersects our invisible drag plane
+                raycaster.setFromCamera(mouse, cameraRagdoll);
+                raycaster.ray.intersectPlane(dragPlane, dragIntersection);
+            });
+
+            window.addEventListener('pointerup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    aboutCanvas.style.cursor = 'pointer';
+                }
+            });
             
-        } catch (error) {
-            console.error("Ragdoll setup failed", error);
-        }
+        } catch (error) { console.error("Ragdoll setup failed", error); }
 
         // ==========================================
         // 3. GLOBAL RESIZE & ANIMATION LOOP
@@ -660,7 +671,8 @@
         });
 
         const scrollTrack = document.querySelector('.hero-scroll-track');
-        const targetSection = document.getElementById('work-section');
+        // CHANGED SCROLL TARGET TO ABOUT SECTION
+        const targetSection = document.getElementById('about-section'); 
         let isAutoScrolling = false; 
         const timeStep = 1 / 60;
 
@@ -676,25 +688,25 @@
                     if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
                 });
 
-                const maxScroll = scrollTrack.offsetHeight - window.innerHeight;
-                const currentScroll = Math.max(0, Math.min(window.scrollY, maxScroll));
-                const scrollProgress = currentScroll / maxScroll; 
-
-                if (scrollProgress > 0.55 && !isAutoScrolling) {
+                // --- UPDATED AUTO-SCROLL CUE ---
+                // Triggers exactly when you scroll 30% down the screen, snapping directly to the About Section
+                if (window.scrollY > window.innerHeight * 0.3 && window.scrollY < window.innerHeight && !isAutoScrolling) {
                     isAutoScrolling = true; 
                     lenis.scrollTo(targetSection, { duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
                 }
-                if (scrollProgress < 0.40 && isAutoScrolling) { isAutoScrolling = false; }
+                if (window.scrollY < 10) { isAutoScrolling = false; } // Reset flag if scrolled back up
 
                 controls.update(); 
                 camera.quaternion.copy(trackballDummy.quaternion);
                 const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(trackballDummy.quaternion);
+                const maxScroll = scrollTrack.offsetHeight - window.innerHeight;
+                const scrollProgress = Math.max(0, Math.min(window.scrollY, maxScroll)) / maxScroll;
                 camera.position.copy(trackballDummy.position).add(forwardVector.multiplyScalar(scrollProgress * 150));
 
                 renderer.render(scene, camera);
             } catch (error) {}
 
-            // --- RAGDOLL SCENE & PROCEDURAL FLAIL ---
+            // --- RAGDOLL SCENE (DRAG & FLOP PHYSICS) ---
             try {
                 if (world && rendererRagdoll) {
                     const aboutRect = aboutCanvas.getBoundingClientRect();
@@ -702,34 +714,59 @@
                         world.step(timeStep);
                         
                         if (ragdollGroup && torsoBody) {
-                            // Sync the Group wrapper to the physics box
+                            
+                            // Desktop Dragging Physics: Pull the physics body toward the mouse
+                            if (isDragging) {
+                                torsoBody.wakeUp();
+                                const dragForce = dragIntersection.clone().sub(ragdollGroup.position).multiplyScalar(12);
+                                torsoBody.velocity.set(dragForce.x, dragForce.y, dragForce.z);
+                            }
+
                             ragdollGroup.position.copy(torsoBody.position);
                             ragdollGroup.quaternion.copy(torsoBody.quaternion);
 
-                            // --- The Procedural Ragdoll Magic ---
-                            // Calculate how fast the body is moving
-                            const speed = torsoBody.velocity.length();
-                            // Limit the maximum flail angle so limbs don't spin 360 degrees
-                            const flail = Math.min(speed * 0.08, Math.PI / 2); 
-                            
-                            // Relax the T-Pose (-1.2 radians puts arms at sides) and add flail physics
-                            if (mixBones.mixamorigLeftArm) {
-                                mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2 + flail, 0.15);
-                            }
-                            if (mixBones.mixamorigRightArm) {
-                                mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2 - flail, 0.15);
-                            }
-                            // Kick legs slightly when flying
-                            if (mixBones.mixamorigLeftUpLeg) {
-                                mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, flail * 0.5, 0.15);
-                            }
-                            if (mixBones.mixamorigRightUpLeg) {
-                                mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, -flail * 0.5, 0.15);
-                            }
-                            // Bobble the head based on rotational velocity
-                            if (mixBones.mixamorigHead) {
-                                mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, torsoBody.angularVelocity.x * 0.1, 0.2);
-                                mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.1, 0.2);
+                            // --- TRUE FLOPPINESS (Vector Resistance) ---
+                            // Instead of just speed, we use directional velocity to bend limbs
+                            const vel = torsoBody.velocity;
+                            const speed = vel.length();
+                            const flop = 0.12; // How fast bones react to physics (looser = floppier)
+
+                            if (speed > 0.1) {
+                                // Arms drag opposite to Y and Z movement
+                                if (mixBones.mixamorigLeftArm) {
+                                    let targetZ = -1.2 + Math.min(1.5, vel.y * 0.15); 
+                                    let targetX = vel.z * 0.1;
+                                    mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, targetZ, flop);
+                                    mixBones.mixamorigLeftArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.x, targetX, flop);
+                                }
+                                if (mixBones.mixamorigRightArm) {
+                                    let targetZ = 1.2 - Math.min(1.5, vel.y * 0.15); 
+                                    let targetX = vel.z * 0.1;
+                                    mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, targetZ, flop);
+                                    mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, targetX, flop);
+                                }
+                                // Legs trail behind
+                                if (mixBones.mixamorigLeftUpLeg) {
+                                    mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
+                                }
+                                if (mixBones.mixamorigRightUpLeg) {
+                                    mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
+                                }
+                                // Spine and Head whiplash
+                                if (mixBones.mixamorigSpine) {
+                                    mixBones.mixamorigSpine.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.x, vel.z * 0.05, flop);
+                                    mixBones.mixamorigSpine.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.z, -vel.x * 0.05, flop);
+                                }
+                                if (mixBones.mixamorigHead) {
+                                    mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, torsoBody.angularVelocity.x * 0.15, flop);
+                                    mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.15, flop);
+                                }
+                            } else {
+                                // Gently return to resting slump when stationary on the ground
+                                if (mixBones.mixamorigLeftArm) mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2, 0.05);
+                                if (mixBones.mixamorigRightArm) mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2, 0.05);
+                                if (mixBones.mixamorigSpine) mixBones.mixamorigSpine.rotation.set(0,0,0);
+                                if (mixBones.mixamorigHead) mixBones.mixamorigHead.rotation.set(0,0,0);
                             }
                         }
                         rendererRagdoll.render(sceneRagdoll, cameraRagdoll);
