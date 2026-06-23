@@ -8,13 +8,35 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='rgb(0,0,255)'/></svg>">
     
     <style>
-        /* --- CSS Reset & Core Styling --- */
+        /* --- Core Styling & Global Cursor Hide --- */
         html, body { 
             margin: 0; 
             padding: 0;
             background-color: #ffffff; 
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             overscroll-behavior: none; 
+            /* Hide the default cursor everywhere */
+            cursor: none !important; 
+        }
+
+        /* Force hide cursor on all interactive elements */
+        a, button, input, canvas {
+            cursor: none !important;
+        }
+
+        /* --- THE CUSTOM CURSOR --- */
+        .custom-cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 12px;
+            height: 12px;
+            background-color: rgb(0, 0, 255); /* Your exact Blue */
+            border-radius: 50%;
+            pointer-events: none; /* Let clicks pass through to the canvas/links */
+            z-index: 99999;
+            transform-origin: center center;
+            transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
         /* --- Minimalist Header Layout --- */
@@ -33,11 +55,7 @@
             mix-blend-mode: difference;
         }
 
-        .nav-col {
-            display: flex;
-            pointer-events: auto; 
-        }
-
+        .nav-col { display: flex; pointer-events: auto; }
         .nav-col.left-col { justify-content: flex-start; }
         .nav-col.right-col { justify-content: flex-end; }
 
@@ -50,7 +68,7 @@
             letter-spacing: 2px;
         }
 
-        /* --- THE BULLETPROOF ALIGNMENT LOCK --- */
+        /* --- Alignment Lock --- */
         .sync-grid {
             display: grid;
             grid-template-columns: 50% 50%; 
@@ -58,55 +76,19 @@
             pointer-events: auto;
         }
 
-        .sync-col-left {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            text-align: right;
-            padding-right: 30px;
-            box-sizing: border-box;
-        }
-
-        .sync-col-right {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            text-align: left;
-            padding-left: 30px;
-            box-sizing: border-box;
-        }
+        .sync-col-left { display: flex; flex-direction: column; align-items: flex-end; text-align: right; padding-right: 30px; box-sizing: border-box; }
+        .sync-col-right { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding-left: 30px; box-sizing: border-box; }
 
         .top-nav .sync-grid { align-items: center; }
         .site-footer .sync-grid { align-items: start; }
 
         /* --- Scroll-to-Fly Layout --- */
-        .hero-scroll-track {
-            height: 140vh; 
-            position: relative;
-        }
+        .hero-scroll-track { height: 140vh; position: relative; }
+        .hero-sticky-container { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; z-index: 1; }
+        #webgl-container { width: 100%; height: 100%; }
+        #webgl-container canvas { display: block; width: 100%; height: 100%; }
 
-        .hero-sticky-container {
-            position: sticky;
-            top: 0;
-            width: 100%;
-            height: 100vh;
-            overflow: hidden;
-            z-index: 1;
-        }
-
-        /* Ensured the container explicitly holds bounds */
-        #webgl-container {
-            width: 100%;
-            height: 100%;
-        }
-
-        #webgl-container canvas { 
-            display: block; 
-            width: 100%;
-            height: 100%;
-        }
-
-        /* --- Interactive About / Ragdoll Section --- */
+        /* --- Interactive About Section --- */
         #about-section {
             position: relative;
             width: 100%;
@@ -128,7 +110,6 @@
             width: 100%;
             height: 100%;
             z-index: 1; 
-            cursor: pointer;
         }
 
         .about-content {
@@ -138,188 +119,45 @@
             pointer-events: none; 
         }
 
-        .about-content h2 {
-            font-size: 3rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: -1px;
-            margin: 0 0 20px 0;
-            pointer-events: auto; 
-        }
+        .about-content h2 { font-size: 3rem; font-weight: 500; text-transform: uppercase; letter-spacing: -1px; margin: 0 0 20px 0; pointer-events: auto; }
+        .about-text-box p { font-size: 16px; line-height: 1.6; color: #333; pointer-events: auto; margin-bottom: 20px; }
+        .about-text-box .instruction { margin-top: 10px; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #0000ff; border: 1px solid #0000ff; display: inline-block; padding: 8px 12px; border-radius: 20px; }
 
-        .about-text-box p {
-            font-size: 16px;
-            line-height: 1.6;
-            color: #333;
-            pointer-events: auto;
-            margin-bottom: 20px;
-        }
+        /* --- Next Section --- */
+        .video-section { position: relative; z-index: 10; background-color: #ffffff; min-height: 100vh; padding: 15vh 5vw; box-sizing: border-box; }
+        .section-headline { font-size: 3rem; font-weight: 500; text-transform: uppercase; letter-spacing: -1px; margin: 0 0 4rem 0; text-align: center; }
+        .video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; max-width: 1400px; margin: 0 auto; }
+        .video-placeholder { width: 100%; aspect-ratio: 16 / 9; background-color: #e0e0e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
 
-        .about-text-box .instruction {
-            margin-top: 10px;
-            font-size: 11px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            color: #0000ff; 
-            border: 1px solid #0000ff;
-            display: inline-block;
-            padding: 8px 12px;
-            border-radius: 20px;
-        }
-
-        /* --- The Next Section --- */
-        .video-section {
-            position: relative;
-            z-index: 10;
-            background-color: #ffffff;
-            min-height: 100vh;
-            padding: 15vh 5vw;
-            box-sizing: border-box;
-        }
-
-        .section-headline {
-            font-size: 3rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: -1px;
-            margin: 0 0 4rem 0;
-            text-align: center;
-        }
-
-        .video-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr; 
-            gap: 40px;
-            width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .video-placeholder {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background-color: #e0e0e0; 
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            font-size: 14px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        /* --- High-End Cinematic Footer --- */
-        .site-footer {
-            position: relative;
-            z-index: 20; 
-            min-height: 100vh;
-            background-color: #000000;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            padding: 0 50px;
-            box-sizing: border-box;
-        }
-
-        .footer-video-bg {
-            position: absolute;
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%;
-            object-fit: cover;
-            opacity: 0.4; 
-            z-index: 1;
-        }
-
-        .footer-content {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-            justify-content: flex-end; 
-            padding-bottom: 30px; 
-        }
-
-        .footer-columns {
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: start;
-            margin-bottom: 8vh; 
-        }
-
+        /* --- Footer --- */
+        .site-footer { position: relative; z-index: 20; min-height: 100vh; background-color: #000000; color: #ffffff; display: flex; flex-direction: column; overflow: hidden; padding: 0 50px; box-sizing: border-box; }
+        .footer-video-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.4; z-index: 1; }
+        .footer-content { position: relative; z-index: 2; display: flex; flex-direction: column; flex-grow: 1; justify-content: flex-end; padding-bottom: 30px; }
+        .footer-columns { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; margin-bottom: 8vh; }
         .footer-col { display: flex; flex-direction: column; }
         .footer-col.left-col { align-items: flex-start; text-align: left; }
         .footer-col.right-col { align-items: flex-end; text-align: right; }
-
-        .footer-col h4, .sync-col-left h4, .sync-col-right h4 {
-            font-size: 10px;
-            color: #999999;
-            margin: 0 0 15px 0;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-        }
-
-        .footer-col a, .footer-col p, .sync-grid a, .sync-grid p {
-            display: inline-block;
-            color: #ffffff;
-            text-decoration: none;
-            font-size: 14px;
-            margin-bottom: 8px;
-            line-height: 1.5;
-            text-transform: uppercase;
-            white-space: nowrap; 
-            transition: opacity 0.3s ease;
-        }
-
+        .footer-col h4, .sync-col-left h4, .sync-col-right h4 { font-size: 10px; color: #999999; margin: 0 0 15px 0; letter-spacing: 1.5px; text-transform: uppercase; }
+        .footer-col a, .footer-col p, .sync-grid a, .sync-grid p { display: inline-block; color: #ffffff; text-decoration: none; font-size: 14px; margin-bottom: 8px; line-height: 1.5; text-transform: uppercase; white-space: nowrap; transition: opacity 0.3s ease; }
         .footer-col a:hover, .sync-grid a:hover { opacity: 0.5; }
-
-        .footer-massive-name {
-            font-size: 21.5vw; 
-            font-weight: 500;
-            line-height: 0.75;
-            letter-spacing: -0.02em;
-            text-transform: uppercase;
-            text-align: left;
-            margin-bottom: 40px;
-        }
-
-        .footer-bottom {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            padding-top: 20px;
-        }
-
-        .legal-links a {
-            color: #ffffff;
-            text-decoration: none;
-            text-transform: uppercase;
-            transition: opacity 0.3s ease;
-        }
+        .footer-massive-name { font-size: 21.5vw; font-weight: 500; line-height: 0.75; letter-spacing: -0.02em; text-transform: uppercase; text-align: left; margin-bottom: 40px; }
+        .footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; border-top: 1px solid rgba(255, 255, 255, 0.2); padding-top: 20px; }
+        .legal-links a { color: #ffffff; text-decoration: none; text-transform: uppercase; transition: opacity 0.3s ease; }
         .legal-links a:hover { opacity: 0.5; }
 
         /* --- Mobile Optimization --- */
         @media (max-width: 768px) {
+            .custom-cursor { display: none; /* Disable JS cursor on mobile */ }
+            html, body, a, button, canvas { cursor: auto !important; }
             .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
             .nav-col { gap: 20px; justify-content: center !important; }
             .sync-grid { width: 100%; display: flex; justify-content: space-around; }
             .sync-col-left, .sync-col-right { padding: 0; align-items: center; text-align: center; }
-            
             #about-section { justify-content: center; padding: 0 5vw; }
             .about-content { text-align: center; margin-top: 40vh; }
             .about-content h2 { text-align: center; }
-
             .video-grid { grid-template-columns: 1fr; }
             .section-headline { font-size: 2rem; }
-            
             .site-footer { padding: 0 20px; }
             .footer-columns { display: flex; flex-direction: column; gap: 50px; margin-bottom: 8vh; margin-top: 10vh; }
             .footer-col.left-col, .footer-col.right-col { align-items: center; text-align: center; }
@@ -330,23 +168,15 @@
 </head>
 <body>
 
+    <div class="custom-cursor" id="custom-cursor"></div>
+
     <nav class="top-nav">
-        <div class="nav-col left-col">
-            <a href="/">SIMON</a>
-        </div>
-        
+        <div class="nav-col left-col"><a href="/">SIMON</a></div>
         <div class="sync-grid">
-            <div class="sync-col-left">
-                <a href="archive.html">ARCHIVE</a>
-            </div>
-            <div class="sync-col-right">
-                <a href="contact.html">CONTACT</a>
-            </div>
+            <div class="sync-col-left"><a href="archive.html">ARCHIVE</a></div>
+            <div class="sync-col-right"><a href="contact.html">CONTACT</a></div>
         </div>
-        
-        <div class="nav-col right-col">
-            <a href="random-energy.html">RANDOM ENERGY</a>
-        </div>
+        <div class="nav-col right-col"><a href="random-energy.html">RANDOM ENERGY</a></div>
     </nav>
 
     <div class="hero-scroll-track">
@@ -378,7 +208,6 @@
         <video class="footer-video-bg" autoplay loop muted playsinline>
             <source src="./assets/footer-loop.mp4" type="video/mp4">
         </video>
-        
         <div class="footer-content">
             <div class="footer-columns">
                 <div class="footer-col left-col">
@@ -386,7 +215,6 @@
                     <a href="https://www.instagram.com/latenight.lasagna/" target="_blank">INSTAGRAM</a>
                     <a href="https://de.linkedin.com/in/moinsen" target="_blank">LINKEDIN</a>
                 </div>
-                
                 <div class="sync-grid">
                     <div class="sync-col-left">
                         <h4>SHOP</h4>
@@ -397,20 +225,15 @@
                         <a href="mailto:contact@simonhahn.de">CONTACT@SIMONHAHN.DE</a>
                     </div>
                 </div>
-                
                 <div class="footer-col right-col">
                     <h4>OFFICE</h4>
                     <p>UNGERSTRASSE 12<br>04318 LEIPZIG<br>GERMANY</p>
                 </div>
             </div>
-
             <div class="footer-massive-name">SIMON</div>
-
             <div class="footer-bottom">
                 <span>© 2026 SIMON HAHN</span>
-                <div class="legal-links">
-                    <a href="impressum.html">PRIVACY POLICY</a>
-                </div>
+                <div class="legal-links"><a href="impressum.html">PRIVACY POLICY</a></div>
             </div>
         </div>
     </footer>
@@ -422,32 +245,45 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
 
     <script>
+        // Custom Cursor Logic
+        const cursor = document.getElementById('custom-cursor');
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            // Update position immediately for zero latency
+            cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(1)`;
+        });
+
+        window.addEventListener('mousedown', () => {
+            cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(0.6)`;
+        });
+
+        window.addEventListener('mouseup', () => {
+            cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(1)`;
+        });
+
+        // UI Scramble Links
         const letters = "ABCDEFGHJKLNPRSTVXYZ0123456789#&*";
         const allLinks = document.querySelectorAll('.top-nav a, .site-footer a');
-
         allLinks.forEach(link => {
             link.dataset.value = link.textContent.trim().toUpperCase();
             let interval = null; 
-
             link.addEventListener('mouseenter', () => {
                 if (!link.style.width) {
                     const rect = link.getBoundingClientRect();
                     link.style.width = Math.ceil(rect.width) + 'px';
                 }
-
                 let iteration = 0;
                 clearInterval(interval);
-
                 interval = setInterval(() => {
-                    link.textContent = link.dataset.value
-                        .split("")
-                        .map((letter, index) => {
-                            if (index < iteration) return link.dataset.value[index];
-                            if (link.dataset.value[index] === " ") return " ";
-                            return letters[Math.floor(Math.random() * letters.length)];
-                        })
-                        .join("");
-
+                    link.textContent = link.dataset.value.split("").map((letter, index) => {
+                        if (index < iteration) return link.dataset.value[index];
+                        if (link.dataset.value[index] === " ") return " ";
+                        return letters[Math.floor(Math.random() * letters.length)];
+                    }).join("");
                     if (iteration >= link.dataset.value.length) {
                         clearInterval(interval);
                         link.textContent = link.dataset.value; 
@@ -459,10 +295,7 @@
 
         // Smooth Scrolling
         const lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
-        function raf(time) {
-            lenis.raf(time);
-            requestAnimationFrame(raf);
-        }
+        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
         requestAnimationFrame(raf);
     </script>
 
@@ -514,11 +347,9 @@
         // ==========================================
         let world, torsoBody, sceneRagdoll, cameraRagdoll, rendererRagdoll;
         let ragdollGroup, mixBones = {}; 
-        
         const aboutCanvas = document.getElementById('ragdoll-canvas');
         
         // --- Smart Interaction Variables ---
-        // Detects if user has a precise mouse (desktop) vs touch (mobile)
         const isDesktop = window.matchMedia("(pointer: fine)").matches; 
         let isDragging = false;
         let dragPlane = new THREE.Plane();
@@ -526,7 +357,10 @@
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
 
-        // Update the instruction text based on device
+        // Cannon.js constraints variables
+        let mouseConstraintBody;
+        let mouseConstraint = null;
+
         const instructionText = document.querySelector('.about-text-box .instruction');
         if (instructionText) {
             instructionText.innerText = isDesktop ? "DRAG TO THROW ME AROUND." : "TAP TO POKE ME.";
@@ -534,7 +368,6 @@
         
         try {
             sceneRagdoll = new THREE.Scene();
-
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             sceneRagdoll.add(ambientLight);
 
@@ -561,25 +394,32 @@
             floorMesh.receiveShadow = true;
             sceneRagdoll.add(floorMesh);
 
+            // Setup Cannon.js World
             world = new CANNON.World();
             world.gravity.set(0, -9.82, 0);
             world.broadphase = new CANNON.NaiveBroadphase();
             world.solver.iterations = 10; 
 
+            // Physics Floor
             const floorBody = new CANNON.Body({ mass: 0 }); 
             floorBody.addShape(new CANNON.Plane());
             floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
             world.addBody(floorBody);
 
+            // Torso Body
             const torsoShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.8, 0.5)); 
             torsoBody = new CANNON.Body({
                 mass: 5,
                 position: new CANNON.Vec3(-2, 8, 0), 
                 linearDamping: 0.1,
-                angularDamping: 0.3 // LOWER DAMPING = MORE TUMBLING/FLOPPING
+                angularDamping: 0.3 
             });
             torsoBody.addShape(torsoShape);
             world.addBody(torsoBody);
+
+            // Kinematic body that follows the mouse to pull the character
+            mouseConstraintBody = new CANNON.Body({ mass: 0 });
+            world.addBody(mouseConstraintBody);
 
             ragdollGroup = new THREE.Group();
             sceneRagdoll.add(ragdollGroup);
@@ -588,7 +428,6 @@
             loader.load('./assets/simon-ps1.glb', (gltf) => {
                 const characterRoot = gltf.scene;
                 characterRoot.position.set(0, -0.8, 0); 
-                
                 characterRoot.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
@@ -603,7 +442,7 @@
                 ragdollGroup.add(characterRoot);
             });
 
-            // --- Desktop Drag & Mobile Poke Event Listeners ---
+            // --- FLAWLESS CONSTRAINT DRAGGING LOGIC ---
             window.addEventListener('pointerdown', (e) => {
                 const rect = aboutCanvas.getBoundingClientRect();
                 if (rect.top < window.innerHeight && rect.bottom > 0 && torsoBody) {
@@ -611,20 +450,36 @@
                     mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
                     
                     raycaster.setFromCamera(mouse, cameraRagdoll);
-                    const intersects = raycaster.intersectObjects(sceneRagdoll.children, true);
                     
-                    if (intersects.length > 0 && intersects[0].object !== floorMesh) {
+                    // We only want to drag the character, not the floor
+                    const intersects = raycaster.intersectObjects(ragdollGroup.children, true);
+                    
+                    if (intersects.length > 0) {
                         if (isDesktop) {
-                            // DESKTOP: Start dragging
+                            // 1. Mark as dragging
                             isDragging = true;
-                            aboutCanvas.style.cursor = 'grabbing';
-                            // Create an invisible mathematical plane facing camera at the object's depth
+                            torsoBody.wakeUp();
+
+                            // 2. Position the invisible mouse physics body exactly where we clicked
+                            mouseConstraintBody.position.copy(intersects[0].point);
+
+                            // 3. Create a physical "spring/rubber band" constraint to pull him
+                            // Center pivot ensures he tumbles naturally without snapping his neck
+                            mouseConstraint = new CANNON.PointToPointConstraint(
+                                torsoBody, 
+                                new CANNON.Vec3(0,0,0), 
+                                mouseConstraintBody, 
+                                new CANNON.Vec3(0,0,0)
+                            );
+                            world.addConstraint(mouseConstraint);
+
+                            // 4. Create an invisible mathematical plane facing the camera to drag against
                             dragPlane.setFromNormalAndCoplanarPoint(
                                 cameraRagdoll.getWorldDirection(new THREE.Vector3()),
-                                ragdollGroup.position
+                                intersects[0].point
                             );
                         } else {
-                            // MOBILE: Poke mechanics
+                            // Mobile poke
                             const randomX = (Math.random() - 0.5) * 25;
                             const randomZ = (Math.random() - 0.5) * 25;
                             torsoBody.applyImpulse(new CANNON.Vec3(randomX, 45, randomZ), torsoBody.position);
@@ -634,7 +489,8 @@
             });
 
             window.addEventListener('pointermove', (e) => {
-                if (!isDragging || !isDesktop) return;
+                if (!isDragging || !isDesktop || !mouseConstraint) return;
+                
                 const rect = aboutCanvas.getBoundingClientRect();
                 mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -642,13 +498,18 @@
                 // Find where the mouse intersects our invisible drag plane
                 raycaster.setFromCamera(mouse, cameraRagdoll);
                 raycaster.ray.intersectPlane(dragPlane, dragIntersection);
+                
+                // Move the invisible physics body. The constraint will pull the torso behind it!
+                mouseConstraintBody.position.set(dragIntersection.x, dragIntersection.y, dragIntersection.z);
             });
 
             window.addEventListener('pointerup', () => {
-                if (isDragging) {
-                    isDragging = false;
-                    aboutCanvas.style.cursor = 'pointer';
+                if (mouseConstraint) {
+                    // Let go of the rubber band
+                    world.removeConstraint(mouseConstraint);
+                    mouseConstraint = null;
                 }
+                isDragging = false;
             });
             
         } catch (error) { console.error("Ragdoll setup failed", error); }
@@ -671,7 +532,6 @@
         });
 
         const scrollTrack = document.querySelector('.hero-scroll-track');
-        // CHANGED SCROLL TARGET TO ABOUT SECTION
         const targetSection = document.getElementById('about-section'); 
         let isAutoScrolling = false; 
         const timeStep = 1 / 60;
@@ -688,13 +548,13 @@
                     if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
                 });
 
-                // --- UPDATED AUTO-SCROLL CUE ---
-                // Triggers exactly when you scroll 30% down the screen, snapping directly to the About Section
+                // --- SMART SCROLL CUE ---
+                // Triggers when you scroll past 30% of the Hero
                 if (window.scrollY > window.innerHeight * 0.3 && window.scrollY < window.innerHeight && !isAutoScrolling) {
                     isAutoScrolling = true; 
                     lenis.scrollTo(targetSection, { duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
                 }
-                if (window.scrollY < 10) { isAutoScrolling = false; } // Reset flag if scrolled back up
+                if (window.scrollY < 10) { isAutoScrolling = false; } 
 
                 controls.update(); 
                 camera.quaternion.copy(trackballDummy.quaternion);
@@ -706,7 +566,7 @@
                 renderer.render(scene, camera);
             } catch (error) {}
 
-            // --- RAGDOLL SCENE (DRAG & FLOP PHYSICS) ---
+            // --- RAGDOLL SCENE (CONSTRAINT PHYSICS & FLOPPINESS) ---
             try {
                 if (world && rendererRagdoll) {
                     const aboutRect = aboutCanvas.getBoundingClientRect();
@@ -715,24 +575,14 @@
                         
                         if (ragdollGroup && torsoBody) {
                             
-                            // Desktop Dragging Physics: Pull the physics body toward the mouse
-                            if (isDragging) {
-                                torsoBody.wakeUp();
-                                const dragForce = dragIntersection.clone().sub(ragdollGroup.position).multiplyScalar(12);
-                                torsoBody.velocity.set(dragForce.x, dragForce.y, dragForce.z);
-                            }
-
                             ragdollGroup.position.copy(torsoBody.position);
                             ragdollGroup.quaternion.copy(torsoBody.quaternion);
 
-                            // --- TRUE FLOPPINESS (Vector Resistance) ---
-                            // Instead of just speed, we use directional velocity to bend limbs
                             const vel = torsoBody.velocity;
                             const speed = vel.length();
-                            const flop = 0.12; // How fast bones react to physics (looser = floppier)
+                            const flop = 0.12; 
 
                             if (speed > 0.1) {
-                                // Arms drag opposite to Y and Z movement
                                 if (mixBones.mixamorigLeftArm) {
                                     let targetZ = -1.2 + Math.min(1.5, vel.y * 0.15); 
                                     let targetX = vel.z * 0.1;
@@ -745,14 +595,8 @@
                                     mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, targetZ, flop);
                                     mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, targetX, flop);
                                 }
-                                // Legs trail behind
-                                if (mixBones.mixamorigLeftUpLeg) {
-                                    mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
-                                }
-                                if (mixBones.mixamorigRightUpLeg) {
-                                    mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
-                                }
-                                // Spine and Head whiplash
+                                if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
+                                if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-0.5, vel.z * 0.05), flop);
                                 if (mixBones.mixamorigSpine) {
                                     mixBones.mixamorigSpine.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.x, vel.z * 0.05, flop);
                                     mixBones.mixamorigSpine.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.z, -vel.x * 0.05, flop);
@@ -762,7 +606,6 @@
                                     mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.15, flop);
                                 }
                             } else {
-                                // Gently return to resting slump when stationary on the ground
                                 if (mixBones.mixamorigLeftArm) mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2, 0.05);
                                 if (mixBones.mixamorigRightArm) mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2, 0.05);
                                 if (mixBones.mixamorigSpine) mixBones.mixamorigSpine.rotation.set(0,0,0);
@@ -775,7 +618,7 @@
             } catch (error) {}
         }
 
-        animate();    
+        animate();
     </script>
 </body>
 </html>
