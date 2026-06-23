@@ -94,13 +94,19 @@
             z-index: 1;
         }
 
+        /* Ensured the container explicitly holds bounds */
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+        }
+
         #webgl-container canvas { 
             display: block; 
             width: 100%;
             height: 100%;
         }
 
-        /* --- NEW: Interactive About / Ragdoll Section --- */
+        /* --- Interactive About / Ragdoll Section --- */
         #about-section {
             position: relative;
             width: 100%;
@@ -413,7 +419,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
 
     <script>
         const letters = "ABCDEFGHJKLNPRSTVXYZ0123456789#&*";
@@ -462,7 +468,7 @@
 
     <script>
         // ==========================================
-        // 1. HERO PARTICLES SETUP
+        // 1. HERO PARTICLES SETUP (Always runs safely)
         // ==========================================
         const container = document.getElementById('webgl-container');
         const scene = new THREE.Scene();
@@ -518,101 +524,107 @@
         }
 
         // ==========================================
-        // 2. RAGDOLL ABOUT SECTION SETUP
+        // 2. RAGDOLL ABOUT SECTION SETUP 
         // ==========================================
+        let world, torsoBody, sceneRagdoll, cameraRagdoll, rendererRagdoll, characterRoot;
         const aboutCanvas = document.getElementById('ragdoll-canvas');
-        const sceneRagdoll = new THREE.Scene();
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        sceneRagdoll.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        dirLight.position.set(5, 10, 5);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 1024;
-        dirLight.shadow.mapSize.height = 1024;
-        sceneRagdoll.add(dirLight);
-
-        const cameraRagdoll = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-        cameraRagdoll.position.set(0, 3, 10);
-
-        const rendererRagdoll = new THREE.WebGLRenderer({ canvas: aboutCanvas, alpha: true, antialias: true });
-        rendererRagdoll.setSize(window.innerWidth, window.innerHeight);
-        rendererRagdoll.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        rendererRagdoll.shadowMap.enabled = true;
-        rendererRagdoll.shadowMap.type = THREE.PCFSoftShadowMap;
-
-        // Invisible Shadow Catcher
-        const floorGeometry = new THREE.PlaneGeometry(100, 100);
-        const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 }); 
-        const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
-        floorMesh.rotation.x = -Math.PI / 2;
-        floorMesh.receiveShadow = true;
-        sceneRagdoll.add(floorMesh);
-
-        // Cannon.js Physics World
-        const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
-        world.solver.iterations = 10; 
-
-        const floorBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane() });
-        floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-        world.addBody(floorBody);
-
-        // GLTF Loading & Physics Binding
-        const loader = new THREE.GLTFLoader();
-        let characterRoot;
         
-        // Match the bounding box to roughly a standard human proportion (w, h, d limits)
-        const torsoShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.8, 0.5)); 
-        const torsoBody = new CANNON.Body({
-            mass: 5,
-            position: new CANNON.Vec3(-2, 8, 0), // Drop from high up
-            shape: torsoShape,
-            angularDamping: 0.8 // Prevents spinning like a top forever
-        });
-        world.addBody(torsoBody);
+        try {
+            sceneRagdoll = new THREE.Scene();
 
-        // MAKE SURE YOUR FILE IS IN THE 'assets' FOLDER EXACTLY NAMED 'simon-ps1.glb'
-        loader.load('./assets/simon-ps1.glb', (gltf) => {
-            characterRoot = gltf.scene;
-            characterRoot.traverse((child) => {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    // PS1 HACK: Crunchy pixels
-                    if (child.material.map) {
-                        child.material.map.magFilter = THREE.NearestFilter;
-                        child.material.map.minFilter = THREE.NearestFilter;
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            sceneRagdoll.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 10, 5);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            sceneRagdoll.add(dirLight);
+
+            cameraRagdoll = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            cameraRagdoll.position.set(0, 3, 10);
+
+            rendererRagdoll = new THREE.WebGLRenderer({ canvas: aboutCanvas, alpha: true, antialias: true });
+            rendererRagdoll.setSize(window.innerWidth, window.innerHeight);
+            rendererRagdoll.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            rendererRagdoll.shadowMap.enabled = true;
+            rendererRagdoll.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // Invisible Shadow Catcher
+            const floorGeometry = new THREE.PlaneGeometry(100, 100);
+            const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 }); 
+            const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.receiveShadow = true;
+            sceneRagdoll.add(floorMesh);
+
+            // Cannon.js Physics World (Updated to strict older syntax)
+            world = new CANNON.World();
+            world.gravity.set(0, -9.82, 0);
+            world.broadphase = new CANNON.NaiveBroadphase();
+            world.solver.iterations = 10; 
+
+            // mass: 0 is the stable way to create static bodies in vanilla cannon.js
+            const floorBody = new CANNON.Body({ mass: 0 }); 
+            floorBody.addShape(new CANNON.Plane());
+            floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+            world.addBody(floorBody);
+
+            // The bounding box for your falling character
+            const torsoShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.8, 0.5)); 
+            torsoBody = new CANNON.Body({
+                mass: 5,
+                position: new CANNON.Vec3(-2, 8, 0), 
+                linearDamping: 0.1,
+                angularDamping: 0.8 
+            });
+            torsoBody.addShape(torsoShape);
+            world.addBody(torsoBody);
+
+            // GLTF Loading
+            const loader = new THREE.GLTFLoader();
+            loader.load('./assets/simon-ps1.glb', (gltf) => {
+                characterRoot = gltf.scene;
+                characterRoot.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        if (child.material.map) {
+                            child.material.map.magFilter = THREE.NearestFilter;
+                            child.material.map.minFilter = THREE.NearestFilter;
+                        }
+                    }
+                });
+                sceneRagdoll.add(characterRoot);
+            }, undefined, (error) => {
+                console.warn("Model didn't load yet. Ignore if testing locally.", error);
+            });
+
+            // Interactive "Poke" Mechanic
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            
+            window.addEventListener('click', (event) => {
+                const rect = aboutCanvas.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0 && torsoBody) {
+                    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                    
+                    raycaster.setFromCamera(mouse, cameraRagdoll);
+                    const intersects = raycaster.intersectObjects(sceneRagdoll.children, true);
+                    
+                    if (intersects.length > 0) {
+                        const randomX = (Math.random() - 0.5) * 20;
+                        const randomZ = (Math.random() - 0.5) * 20;
+                        torsoBody.applyImpulse(new CANNON.Vec3(randomX, 35, randomZ), torsoBody.position);
                     }
                 }
             });
-            sceneRagdoll.add(characterRoot);
-        }, undefined, (error) => {
-            console.warn("Could not load character. Ensure './assets/simon-ps1.glb' exists.", error);
-        });
-
-        // Interactive "Poke" Mechanic
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        
-        window.addEventListener('click', (event) => {
-            const rect = aboutCanvas.getBoundingClientRect();
-            // Only trigger if clicking inside the About section
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-                
-                raycaster.setFromCamera(mouse, cameraRagdoll);
-                const intersects = raycaster.intersectObjects(sceneRagdoll.children, true);
-                
-                if (intersects.length > 0) {
-                    // Apply a random upward impulse to toss the character
-                    const randomX = (Math.random() - 0.5) * 20;
-                    const randomZ = (Math.random() - 0.5) * 20;
-                    torsoBody.applyImpulse(new CANNON.Vec3(randomX, 35, randomZ), torsoBody.position);
-                }
-            }
-        });
+            
+        } catch (error) {
+            console.error("Ragdoll setup failed, but Hero will continue running safely.", error);
+        }
 
         // ==========================================
         // 3. GLOBAL RESIZE & ANIMATION LOOP
@@ -624,9 +636,11 @@
             trackballDummy.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
 
-            cameraRagdoll.aspect = window.innerWidth / window.innerHeight;
-            cameraRagdoll.updateProjectionMatrix();
-            rendererRagdoll.setSize(window.innerWidth, window.innerHeight);
+            if (cameraRagdoll && rendererRagdoll) {
+                cameraRagdoll.aspect = window.innerWidth / window.innerHeight;
+                cameraRagdoll.updateProjectionMatrix();
+                rendererRagdoll.setSize(window.innerWidth, window.innerHeight);
+            }
         });
 
         const scrollTrack = document.querySelector('.hero-scroll-track');
@@ -634,44 +648,53 @@
         let isAutoScrolling = false; 
         const timeStep = 1 / 60;
 
-        // Master Animation Loop (Highly Optimized)
         function animate() {
             requestAnimationFrame(animate);
 
-            // --- HERO SCENE (Always Running) ---
-            sprites.forEach(sprite => {
-                sprite.position.add(sprite.userData.velocity);
-                if (sprite.position.x > 80 || sprite.position.x < -80) sprite.userData.velocity.x *= -1;
-                if (sprite.position.y > 80 || sprite.position.y < -80) sprite.userData.velocity.y *= -1;
-                if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
-            });
+            // --- HERO SCENE (Decoupled & Bulletproof) ---
+            try {
+                sprites.forEach(sprite => {
+                    sprite.position.add(sprite.userData.velocity);
+                    if (sprite.position.x > 80 || sprite.position.x < -80) sprite.userData.velocity.x *= -1;
+                    if (sprite.position.y > 80 || sprite.position.y < -80) sprite.userData.velocity.y *= -1;
+                    if (sprite.position.z > 80 || sprite.position.z < -80) sprite.userData.velocity.z *= -1;
+                });
 
-            const maxScroll = scrollTrack.offsetHeight - window.innerHeight;
-            const currentScroll = Math.max(0, Math.min(window.scrollY, maxScroll));
-            const scrollProgress = currentScroll / maxScroll; 
+                const maxScroll = scrollTrack.offsetHeight - window.innerHeight;
+                const currentScroll = Math.max(0, Math.min(window.scrollY, maxScroll));
+                const scrollProgress = currentScroll / maxScroll; 
 
-            if (scrollProgress > 0.55 && !isAutoScrolling) {
-                isAutoScrolling = true; 
-                lenis.scrollTo(targetSection, { duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
-            }
-            if (scrollProgress < 0.40 && isAutoScrolling) { isAutoScrolling = false; }
-
-            controls.update(); 
-            camera.quaternion.copy(trackballDummy.quaternion);
-            const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(trackballDummy.quaternion);
-            camera.position.copy(trackballDummy.position).add(forwardVector.multiplyScalar(scrollProgress * 150));
-
-            renderer.render(scene, camera);
-
-            // --- RAGDOLL SCENE (Only runs when visible to save battery/CPU) ---
-            const aboutRect = aboutCanvas.getBoundingClientRect();
-            if (aboutRect.top < window.innerHeight && aboutRect.bottom > 0) {
-                world.step(timeStep);
-                if (characterRoot) {
-                    characterRoot.position.copy(torsoBody.position);
-                    characterRoot.quaternion.copy(torsoBody.quaternion);
+                if (scrollProgress > 0.55 && !isAutoScrolling) {
+                    isAutoScrolling = true; 
+                    lenis.scrollTo(targetSection, { duration: 1.5, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
                 }
-                rendererRagdoll.render(sceneRagdoll, cameraRagdoll);
+                if (scrollProgress < 0.40 && isAutoScrolling) { isAutoScrolling = false; }
+
+                controls.update(); 
+                camera.quaternion.copy(trackballDummy.quaternion);
+                const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(trackballDummy.quaternion);
+                camera.position.copy(trackballDummy.position).add(forwardVector.multiplyScalar(scrollProgress * 150));
+
+                renderer.render(scene, camera);
+            } catch (error) {
+                console.error("Hero render loop error:", error);
+            }
+
+            // --- RAGDOLL SCENE (Only runs if Cannon.js loaded properly) ---
+            try {
+                if (world && rendererRagdoll) {
+                    const aboutRect = aboutCanvas.getBoundingClientRect();
+                    if (aboutRect.top < window.innerHeight && aboutRect.bottom > 0) {
+                        world.step(timeStep);
+                        if (characterRoot && torsoBody) {
+                            characterRoot.position.copy(torsoBody.position);
+                            characterRoot.quaternion.copy(torsoBody.quaternion);
+                        }
+                        rendererRagdoll.render(sceneRagdoll, cameraRagdoll);
+                    }
+                }
+            } catch (error) {
+                // Fails silently in the background
             }
         }
 
