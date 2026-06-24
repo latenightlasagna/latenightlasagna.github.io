@@ -81,7 +81,6 @@
         .site-footer .sync-grid { align-items: start; }
 
         /* --- Scroll-to-Fly Layout --- */
-        /* INCREASED TO 250vh to give the user time to fly through the particles before snapping */
         .hero-scroll-track { height: 250vh; position: relative; }
         .hero-sticky-container { position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden; z-index: 1; }
         #webgl-container { width: 100%; height: 100%; }
@@ -365,7 +364,8 @@
             rendererRagdoll.shadowMap.enabled = true;
             rendererRagdoll.shadowMap.type = THREE.PCFSoftShadowMap;
 
-            const floorGeometry = new THREE.PlaneGeometry(100, 100);
+            // ENGINEER FIX: Massive 2000x2000 Ground Plane for infinite shadowing
+            const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
             const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 }); 
             const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
             floorMesh.rotation.x = -Math.PI / 2;
@@ -373,7 +373,8 @@
             sceneRagdoll.add(floorMesh);
 
             world = new CANNON.World();
-            world.gravity.set(0, -9.82, 0);
+            // ENGINEER FIX: Stronger, snappier gravity for satisfying weight
+            world.gravity.set(0, -25, 0); 
             world.broadphase = new CANNON.NaiveBroadphase();
             world.solver.iterations = 10; 
 
@@ -387,7 +388,7 @@
                 mass: 5,
                 position: new CANNON.Vec3(-2, 8, 0), 
                 linearDamping: 0.05,
-                angularDamping: 0.05 // SUPER LOW = MAX SPINNING 
+                angularDamping: 0.05 
             });
             torsoBody.addShape(torsoShape);
             world.addBody(torsoBody);
@@ -395,7 +396,7 @@
             ragdollGroup = new THREE.Group();
             sceneRagdoll.add(ragdollGroup);
 
-            const hitGeo = new THREE.BoxGeometry(2.5, 3.5, 2.5); // Slightly larger hitbox
+            const hitGeo = new THREE.BoxGeometry(2.5, 3.5, 2.5); 
             const hitMat = new THREE.MeshBasicMaterial({ visible: false });
             const hitboxMesh = new THREE.Mesh(hitGeo, hitMat);
             hitboxMesh.name = "dragHitbox";
@@ -438,9 +439,10 @@
                             );
                             raycaster.ray.intersectPlane(dragPlane, dragIntersection);
                         } else {
-                            const randomX = (Math.random() - 0.5) * 25;
-                            const randomZ = (Math.random() - 0.5) * 25;
-                            torsoBody.applyImpulse(new CANNON.Vec3(randomX, 45, randomZ), torsoBody.position);
+                            // Increased poke force to match new heavy gravity
+                            const randomX = (Math.random() - 0.5) * 40;
+                            const randomZ = (Math.random() - 0.5) * 40;
+                            torsoBody.applyImpulse(new CANNON.Vec3(randomX, 60, randomZ), torsoBody.position);
                         }
                     }
                 }
@@ -492,7 +494,7 @@
             currentCursorScale += (targetCursorScale - currentCursorScale) * 0.3; 
             cursor.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) translate(-50%, -50%) scale(${currentCursorScale})`;
 
-            // Hero Scene & SMART SCROLL
+            // Hero Scene 
             try {
                 sprites.forEach(sprite => {
                     sprite.position.add(sprite.userData.velocity);
@@ -504,12 +506,11 @@
                 const maxScroll = scrollTrack.offsetHeight - window.innerHeight;
                 const scrollProgress = Math.max(0, Math.min(window.scrollY, maxScroll)) / maxScroll;
 
-                // Triggers exactly when you have flown past all images (roughly 85% of the massive 250vh scroll track)
                 if (scrollProgress > 0.85 && !snapMemory) {
                     snapMemory = true; 
                     lenis.scrollTo(targetSection, { 
                         duration: 1.5, 
-                        easing: (t) => 1 - Math.pow(1 - t, 4) // Smooth deceleration
+                        easing: (t) => 1 - Math.pow(1 - t, 4) 
                     });
                 }
                 if (window.scrollY < 10) { snapMemory = false; } 
@@ -522,17 +523,28 @@
                 renderer.render(scene, camera);
             } catch (error) {}
 
-            // Ragdoll Scene & SMART RESET & FULL CHAIN KINEMATICS
+            // Ragdoll Scene
             try {
                 if (world && rendererRagdoll) {
                     const aboutRect = aboutCanvas.getBoundingClientRect();
                     if (aboutRect.top < window.innerHeight && aboutRect.bottom > 0) {
                         
-                        // SMART OUT-OF-BOUNDS RESET
-                        if (torsoBody.position.y < -3 || Math.abs(torsoBody.position.x) > 15 || Math.abs(torsoBody.position.z) > 15) {
-                            torsoBody.position.set(-2, 10, 0); // Drop from the ceiling
-                            torsoBody.velocity.set(0, 0, 0);
-                            torsoBody.angularVelocity.set((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10); // Random spin
+                        // ENGINEER FIX: Dynamic Frustum Boundaries
+                        // This calculates exactly where the edges of the screen are in 3D space based on the user's monitor
+                        const fovRad = (cameraRagdoll.fov / 2) * (Math.PI / 180);
+                        const visibleY = Math.tan(fovRad) * Math.abs(cameraRagdoll.position.z);
+                        const visibleX = visibleY * cameraRagdoll.aspect;
+
+                        // Reset if thrown far off the sides, deep behind the camera, or falls through the floor
+                        if (
+                            torsoBody.position.y < -5 || 
+                            Math.abs(torsoBody.position.x) > visibleX + 4 || 
+                            torsoBody.position.z < -30 || 
+                            torsoBody.position.z > cameraRagdoll.position.z + 5
+                        ) {
+                            torsoBody.position.set(-2, visibleY + 5, 0); // Drop gracefully from just above the screen
+                            torsoBody.velocity.set(0, -5, 0); // Add a little downward initial drop velocity
+                            torsoBody.angularVelocity.set((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10);
                             torsoBody.wakeUp();
                             isDragging = false; 
                         }
@@ -543,7 +555,8 @@
                                 dragIntersection.y - torsoBody.position.y,
                                 dragIntersection.z - torsoBody.position.z
                             );
-                            torsoBody.velocity.set(pullForce.x * 8, pullForce.y * 8, pullForce.z * 8);
+                            // Increased pulling multiplier to fight the new heavier gravity
+                            torsoBody.velocity.set(pullForce.x * 12, pullForce.y * 12, pullForce.z * 12);
                         }
 
                         world.step(timeStep);
@@ -552,22 +565,20 @@
                             ragdollGroup.position.copy(torsoBody.position);
                             ragdollGroup.quaternion.copy(torsoBody.quaternion);
 
-                            // THE FULL-CHAIN RAGDOLL ALGORITHM
                             const vel = torsoBody.velocity;
                             const speed = vel.length();
-                            const flop = 0.18; // Increased response rate for floppier limbs
+                            const flop = 0.18; 
 
                             if (speed > 0.1) {
                                 const dragX = vel.x * 0.1;
                                 const dragY = vel.y * 0.15;
                                 const dragZ = vel.z * 0.1;
 
-                                // --- SHOULDERS & ARMS ---
                                 if (mixBones.mixamorigLeftArm) {
                                     mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2 + Math.min(1.5, dragY), flop);
                                     mixBones.mixamorigLeftArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.x, dragZ, flop);
                                 }
-                                if (mixBones.mixamorigLeftForeArm) { // Elbows bend back
+                                if (mixBones.mixamorigLeftForeArm) { 
                                     mixBones.mixamorigLeftForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftForeArm.rotation.z, Math.max(0, dragY * 1.5), flop);
                                 }
                                 
@@ -575,41 +586,30 @@
                                     mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2 - Math.min(1.5, dragY), flop);
                                     mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, dragZ, flop);
                                 }
-                                if (mixBones.mixamorigRightForeArm) { // Elbows bend back
+                                if (mixBones.mixamorigRightForeArm) { 
                                     mixBones.mixamorigRightForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightForeArm.rotation.z, Math.min(0, -dragY * 1.5), flop);
                                 }
 
-                                // --- HIPS & KNEES ---
                                 if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-1.5, dragZ), flop);
                                 if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-1.5, dragZ), flop);
                                 
-                                // Knees buckle dramatically based on vertical velocity
                                 if (mixBones.mixamorigLeftLeg) mixBones.mixamorigLeftLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftLeg.rotation.x, Math.max(0, dragY * 2), flop);
                                 if (mixBones.mixamorigRightLeg) mixBones.mixamorigRightLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightLeg.rotation.x, Math.max(0, dragY * 2), flop);
 
-                                // --- SPINE CHAIN (Intense Whiplash) ---
                                 if (mixBones.mixamorigSpine) {
                                     mixBones.mixamorigSpine.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.x, dragZ, flop);
                                     mixBones.mixamorigSpine.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.z, -dragX, flop);
                                 }
-                                if (mixBones.mixamorigSpine1) {
-                                    mixBones.mixamorigSpine1.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine1.rotation.x, dragZ * 1.2, flop);
-                                }
-                                if (mixBones.mixamorigSpine2) {
-                                    mixBones.mixamorigSpine2.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine2.rotation.x, dragZ * 1.5, flop);
-                                }
+                                if (mixBones.mixamorigSpine1) mixBones.mixamorigSpine1.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine1.rotation.x, dragZ * 1.2, flop);
+                                if (mixBones.mixamorigSpine2) mixBones.mixamorigSpine2.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine2.rotation.x, dragZ * 1.5, flop);
                                 
-                                // --- NECK & HEAD ---
-                                if (mixBones.mixamorigNeck) {
-                                    mixBones.mixamorigNeck.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigNeck.rotation.x, torsoBody.angularVelocity.x * 0.3, flop);
-                                }
+                                if (mixBones.mixamorigNeck) mixBones.mixamorigNeck.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigNeck.rotation.x, torsoBody.angularVelocity.x * 0.3, flop);
                                 if (mixBones.mixamorigHead) {
                                     mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, torsoBody.angularVelocity.x * 0.4, flop);
                                     mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.4, flop);
                                 }
 
                             } else {
-                                // Relax all bones smoothly when stationary
                                 if (mixBones.mixamorigLeftArm) mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2, 0.05);
                                 if (mixBones.mixamorigRightArm) mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2, 0.05);
                                 if (mixBones.mixamorigLeftForeArm) mixBones.mixamorigLeftForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftForeArm.rotation.z, 0, 0.05);
