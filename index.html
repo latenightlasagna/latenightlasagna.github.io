@@ -8,75 +8,22 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='rgb(0,0,255)'/></svg>">
     
     <style>
-        /* --- Core Styling --- */
-        html, body { 
-            margin: 0; 
-            padding: 0;
-            background-color: #ffffff; 
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-            overscroll-behavior: none; 
-        }
+        html, body { margin: 0; padding: 0; background-color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; overscroll-behavior: none; }
 
         /* --- THE CUSTOM CURSOR --- */
-        .custom-cursor {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 12px;
-            height: 12px;
-            background-color: rgb(0, 0, 255); 
-            border-radius: 50%;
-            pointer-events: none; 
-            z-index: 99999;
-            transform-origin: center center;
-            opacity: 0; 
-            will-change: transform, opacity; 
-            transition: opacity 0.3s ease; 
-        }
-
-        .custom-cursor.visible {
-            opacity: 1; 
-        }
+        .custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: rgb(0, 0, 255); border-radius: 50%; pointer-events: none; z-index: 99999; transform-origin: center center; opacity: 0; will-change: transform, opacity; transition: opacity 0.3s ease; }
+        .custom-cursor.visible { opacity: 1; }
 
         /* --- Minimalist Header Layout --- */
-        .top-nav {
-            position: fixed; 
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 30px 50px;
-            box-sizing: border-box;
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            z-index: 100; 
-            pointer-events: none; 
-            mix-blend-mode: difference;
-        }
-
+        .top-nav { position: fixed; top: 0; left: 0; width: 100%; padding: 30px 50px; box-sizing: border-box; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; z-index: 100; pointer-events: none; mix-blend-mode: difference; }
         .nav-col { display: flex; pointer-events: auto; }
         .nav-col.left-col { justify-content: flex-start; }
         .nav-col.right-col { justify-content: flex-end; }
+        .top-nav a { text-decoration: none; color: #ffffff; font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; }
 
-        .top-nav a {
-            text-decoration: none;
-            color: #ffffff; 
-            font-weight: 500;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .sync-grid {
-            display: grid;
-            grid-template-columns: 50% 50%; 
-            width: 440px; 
-            pointer-events: auto;
-        }
-
+        .sync-grid { display: grid; grid-template-columns: 50% 50%; width: 440px; pointer-events: auto; }
         .sync-col-left { display: flex; flex-direction: column; align-items: flex-end; text-align: right; padding-right: 30px; box-sizing: border-box; }
         .sync-col-right { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding-left: 30px; box-sizing: border-box; }
-
         .top-nav .sync-grid { align-items: center; }
         .site-footer .sync-grid { align-items: start; }
 
@@ -87,23 +34,8 @@
         #webgl-container canvas { display: block; width: 100%; height: 100%; }
 
         /* --- Interactive About Section --- */
-        #about-section {
-            position: relative;
-            width: 100%;
-            height: 100vh; 
-            background-color: #f4f4f4; 
-            display: flex;
-            align-items: center;
-            justify-content: flex-end; 
-            padding: 0 10vw;
-            box-sizing: border-box;
-            overflow: hidden;
-            z-index: 5;
-            cursor: none !important; 
-        }
-        
+        #about-section { position: relative; width: 100%; height: 100vh; background-color: #f4f4f4; display: flex; align-items: center; justify-content: flex-end; padding: 0 10vw; box-sizing: border-box; overflow: hidden; z-index: 5; cursor: none !important; }
         #about-section * { cursor: none !important; }
-
         #ragdoll-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
         .about-content { position: relative; z-index: 2; max-width: 400px; pointer-events: none; }
@@ -264,7 +196,12 @@
     </script>
 
     <script>
-        // --- 0. SCOPED CURSOR ENGINE ---
+        // --- 0. INTERACTION TIMER (For Idle State) ---
+        let lastInteractionTime = Date.now();
+        window.addEventListener('pointermove', () => lastInteractionTime = Date.now());
+        window.addEventListener('scroll', () => lastInteractionTime = Date.now());
+
+        // --- 1. SCOPED CURSOR ENGINE ---
         const cursor = document.getElementById('custom-cursor');
         const aboutSectionElement = document.getElementById('about-section');
         let mouseX = window.innerWidth / 2;
@@ -283,7 +220,7 @@
         aboutSectionElement.addEventListener('mouseleave', () => cursor.classList.remove('visible'));
 
         // ==========================================
-        // 1. HERO PARTICLES SETUP 
+        // 2. HERO PARTICLES SETUP 
         // ==========================================
         const container = document.getElementById('webgl-container');
         const scene = new THREE.Scene();
@@ -325,7 +262,7 @@
         }
 
         // ==========================================
-        // 2. RAGDOLL ABOUT SECTION SETUP 
+        // 3. RAGDOLL ABOUT SECTION SETUP 
         // ==========================================
         let world, torsoBody, sceneRagdoll, cameraRagdoll, rendererRagdoll;
         let ragdollGroup, mixBones = {}; 
@@ -333,10 +270,13 @@
         
         const isDesktop = window.matchMedia("(pointer: fine)").matches; 
         let isDragging = false;
+        
+        // Exact 3D Grab Variables
         let dragPlane = new THREE.Plane();
         let dragIntersection = new THREE.Vector3();
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
+        let grabLocalOffset = new CANNON.Vec3();
 
         const instructionText = document.querySelector('.about-text-box .instruction');
         if (instructionText) {
@@ -364,7 +304,6 @@
             rendererRagdoll.shadowMap.enabled = true;
             rendererRagdoll.shadowMap.type = THREE.PCFSoftShadowMap;
 
-            // ENGINEER FIX: Massive 2000x2000 Ground Plane for infinite shadowing
             const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
             const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 }); 
             const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -373,8 +312,8 @@
             sceneRagdoll.add(floorMesh);
 
             world = new CANNON.World();
-            // ENGINEER FIX: Stronger, snappier gravity for satisfying weight
-            world.gravity.set(0, -25, 0); 
+            // GRAVITY TUNED TO -18
+            world.gravity.set(0, -18, 0); 
             world.broadphase = new CANNON.NaiveBroadphase();
             world.solver.iterations = 10; 
 
@@ -395,12 +334,6 @@
 
             ragdollGroup = new THREE.Group();
             sceneRagdoll.add(ragdollGroup);
-
-            const hitGeo = new THREE.BoxGeometry(2.5, 3.5, 2.5); 
-            const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-            const hitboxMesh = new THREE.Mesh(hitGeo, hitMat);
-            hitboxMesh.name = "dragHitbox";
-            ragdollGroup.add(hitboxMesh);
 
             const loader = new THREE.GLTFLoader();
             loader.load('./assets/simon-ps1.glb', (gltf) => {
@@ -423,26 +356,32 @@
             window.addEventListener('pointerdown', (e) => {
                 const rect = aboutCanvas.getBoundingClientRect();
                 if (rect.top < window.innerHeight && rect.bottom > 0 && torsoBody) {
+                    lastInteractionTime = Date.now();
                     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
                     
                     raycaster.setFromCamera(mouse, cameraRagdoll);
+                    
+                    // ENGINEER FIX: Raycast directly against the character meshes, not a fake hitbox
                     const intersects = raycaster.intersectObjects(ragdollGroup.children, true);
                     
                     if (intersects.length > 0) {
                         if (isDesktop) {
                             isDragging = true;
                             torsoBody.wakeUp();
+                            
+                            // Calculate exact grab offset relative to torso center, accounting for torso rotation
+                            const hitPoint = new CANNON.Vec3(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+                            grabLocalOffset = torsoBody.quaternion.inverse().vmult(hitPoint.vsub(torsoBody.position));
+
                             dragPlane.setFromNormalAndCoplanarPoint(
                                 cameraRagdoll.getWorldDirection(new THREE.Vector3()),
-                                ragdollGroup.position
+                                intersects[0].point
                             );
-                            raycaster.ray.intersectPlane(dragPlane, dragIntersection);
                         } else {
-                            // Increased poke force to match new heavy gravity
                             const randomX = (Math.random() - 0.5) * 40;
                             const randomZ = (Math.random() - 0.5) * 40;
-                            torsoBody.applyImpulse(new CANNON.Vec3(randomX, 60, randomZ), torsoBody.position);
+                            torsoBody.applyImpulse(new CANNON.Vec3(randomX, 40, randomZ), torsoBody.position);
                         }
                     }
                 }
@@ -450,8 +389,10 @@
 
             window.addEventListener('pointermove', (e) => {
                 if (!isDragging || !isDesktop) return;
+                lastInteractionTime = Date.now();
+                const rect = aboutCanvas.getBoundingClientRect();
                 mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
                 
                 raycaster.setFromCamera(mouse, cameraRagdoll);
                 if(raycaster.ray.intersectPlane(dragPlane, dragIntersection)) {
@@ -465,7 +406,7 @@
 
 
         // ==========================================
-        // 3. MASTER ANIMATION LOOP
+        // 4. MASTER ANIMATION LOOP
         // ==========================================
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -485,10 +426,10 @@
         const targetSection = document.getElementById('about-section'); 
         let snapMemory = false; 
         const timeStep = 1 / 60;
+        let idleStateWeight = 0;
 
         function animate(time) {
             requestAnimationFrame(animate);
-
             lenis.raf(time);
 
             currentCursorScale += (targetCursorScale - currentCursorScale) * 0.3; 
@@ -508,10 +449,7 @@
 
                 if (scrollProgress > 0.85 && !snapMemory) {
                     snapMemory = true; 
-                    lenis.scrollTo(targetSection, { 
-                        duration: 1.5, 
-                        easing: (t) => 1 - Math.pow(1 - t, 4) 
-                    });
+                    lenis.scrollTo(targetSection, { duration: 1.5, easing: (t) => 1 - Math.pow(1 - t, 4) });
                 }
                 if (window.scrollY < 10) { snapMemory = false; } 
 
@@ -523,40 +461,51 @@
                 renderer.render(scene, camera);
             } catch (error) {}
 
-            // Ragdoll Scene
+            // Ragdoll Scene & Procedural Engine
             try {
                 if (world && rendererRagdoll) {
                     const aboutRect = aboutCanvas.getBoundingClientRect();
                     if (aboutRect.top < window.innerHeight && aboutRect.bottom > 0) {
                         
-                        // ENGINEER FIX: Dynamic Frustum Boundaries
-                        // This calculates exactly where the edges of the screen are in 3D space based on the user's monitor
+                        // FRUSTOM BOUNDARY RESET
                         const fovRad = (cameraRagdoll.fov / 2) * (Math.PI / 180);
                         const visibleY = Math.tan(fovRad) * Math.abs(cameraRagdoll.position.z);
                         const visibleX = visibleY * cameraRagdoll.aspect;
 
-                        // Reset if thrown far off the sides, deep behind the camera, or falls through the floor
-                        if (
-                            torsoBody.position.y < -5 || 
-                            Math.abs(torsoBody.position.x) > visibleX + 4 || 
-                            torsoBody.position.z < -30 || 
-                            torsoBody.position.z > cameraRagdoll.position.z + 5
-                        ) {
-                            torsoBody.position.set(-2, visibleY + 5, 0); // Drop gracefully from just above the screen
-                            torsoBody.velocity.set(0, -5, 0); // Add a little downward initial drop velocity
+                        if (torsoBody.position.y < -5 || Math.abs(torsoBody.position.x) > visibleX + 4 || torsoBody.position.z < -30 || torsoBody.position.z > cameraRagdoll.position.z + 5) {
+                            torsoBody.position.set(-2, visibleY + 5, 0); 
+                            torsoBody.velocity.set(0, -5, 0); 
                             torsoBody.angularVelocity.set((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10);
                             torsoBody.wakeUp();
                             isDragging = false; 
                         }
 
+                        // --- THE 3D LIMB GRAB ALGORITHM ---
                         if (isDragging && torsoBody) {
+                            // Convert local grab point back to world space
+                            const currentWorldGrabPoint = torsoBody.position.vadd(torsoBody.quaternion.vmult(grabLocalOffset));
+                            
                             const pullForce = new CANNON.Vec3(
-                                dragIntersection.x - torsoBody.position.x,
-                                dragIntersection.y - torsoBody.position.y,
-                                dragIntersection.z - torsoBody.position.z
+                                dragIntersection.x - currentWorldGrabPoint.x,
+                                dragIntersection.y - currentWorldGrabPoint.y,
+                                dragIntersection.z - currentWorldGrabPoint.z
                             );
-                            // Increased pulling multiplier to fight the new heavier gravity
+
+                            // Pull the center of mass toward the mouse
                             torsoBody.velocity.set(pullForce.x * 12, pullForce.y * 12, pullForce.z * 12);
+
+                            // Calculate Torque to spin the limb toward the mouse
+                            const radius = currentWorldGrabPoint.vsub(torsoBody.position);
+                            const torque = new CANNON.Vec3();
+                            radius.cross(pullForce, torque);
+
+                            // Apply angular velocity safely
+                            const torqueStrength = 4;
+                            torsoBody.angularVelocity.set(
+                                Math.max(-20, Math.min(20, torque.x * torqueStrength)),
+                                Math.max(-20, Math.min(20, torque.y * torqueStrength)),
+                                Math.max(-20, Math.min(20, torque.z * torqueStrength))
+                            );
                         }
 
                         world.step(timeStep);
@@ -565,66 +514,85 @@
                             ragdollGroup.position.copy(torsoBody.position);
                             ragdollGroup.quaternion.copy(torsoBody.quaternion);
 
-                            const vel = torsoBody.velocity;
-                            const speed = vel.length();
-                            const flop = 0.18; 
-
-                            if (speed > 0.1) {
-                                const dragX = vel.x * 0.1;
-                                const dragY = vel.y * 0.15;
-                                const dragZ = vel.z * 0.1;
-
-                                if (mixBones.mixamorigLeftArm) {
-                                    mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2 + Math.min(1.5, dragY), flop);
-                                    mixBones.mixamorigLeftArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.x, dragZ, flop);
-                                }
-                                if (mixBones.mixamorigLeftForeArm) { 
-                                    mixBones.mixamorigLeftForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftForeArm.rotation.z, Math.max(0, dragY * 1.5), flop);
-                                }
-                                
-                                if (mixBones.mixamorigRightArm) {
-                                    mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2 - Math.min(1.5, dragY), flop);
-                                    mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, dragZ, flop);
-                                }
-                                if (mixBones.mixamorigRightForeArm) { 
-                                    mixBones.mixamorigRightForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightForeArm.rotation.z, Math.min(0, -dragY * 1.5), flop);
-                                }
-
-                                if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-1.5, dragZ), flop);
-                                if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-1.5, dragZ), flop);
-                                
-                                if (mixBones.mixamorigLeftLeg) mixBones.mixamorigLeftLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftLeg.rotation.x, Math.max(0, dragY * 2), flop);
-                                if (mixBones.mixamorigRightLeg) mixBones.mixamorigRightLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightLeg.rotation.x, Math.max(0, dragY * 2), flop);
-
-                                if (mixBones.mixamorigSpine) {
-                                    mixBones.mixamorigSpine.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.x, dragZ, flop);
-                                    mixBones.mixamorigSpine.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.z, -dragX, flop);
-                                }
-                                if (mixBones.mixamorigSpine1) mixBones.mixamorigSpine1.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine1.rotation.x, dragZ * 1.2, flop);
-                                if (mixBones.mixamorigSpine2) mixBones.mixamorigSpine2.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine2.rotation.x, dragZ * 1.5, flop);
-                                
-                                if (mixBones.mixamorigNeck) mixBones.mixamorigNeck.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigNeck.rotation.x, torsoBody.angularVelocity.x * 0.3, flop);
-                                if (mixBones.mixamorigHead) {
-                                    mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, torsoBody.angularVelocity.x * 0.4, flop);
-                                    mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.4, flop);
-                                }
-
+                            // --- PROCEDURAL IDLE VS RAGDOLL ENGINE ---
+                            const timeSinceInteraction = Date.now() - lastInteractionTime;
+                            const isSittingStill = !isDragging && torsoBody.velocity.length() < 0.2;
+                            
+                            // Crossfade weight: 1 = Idle, 0 = Physics Flop
+                            if (timeSinceInteraction > 20000 && isSittingStill) {
+                                idleStateWeight = THREE.MathUtils.lerp(idleStateWeight, 1, 0.02);
                             } else {
-                                if (mixBones.mixamorigLeftArm) mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2, 0.05);
-                                if (mixBones.mixamorigRightArm) mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2, 0.05);
-                                if (mixBones.mixamorigLeftForeArm) mixBones.mixamorigLeftForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftForeArm.rotation.z, 0, 0.05);
-                                if (mixBones.mixamorigRightForeArm) mixBones.mixamorigRightForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightForeArm.rotation.z, 0, 0.05);
-                                
-                                if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, 0, 0.05);
-                                if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, 0, 0.05);
-                                if (mixBones.mixamorigLeftLeg) mixBones.mixamorigLeftLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftLeg.rotation.x, 0, 0.05);
-                                if (mixBones.mixamorigRightLeg) mixBones.mixamorigRightLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightLeg.rotation.x, 0, 0.05);
-                                
-                                if (mixBones.mixamorigSpine) mixBones.mixamorigSpine.rotation.set(0,0,0);
-                                if (mixBones.mixamorigSpine1) mixBones.mixamorigSpine1.rotation.set(0,0,0);
-                                if (mixBones.mixamorigSpine2) mixBones.mixamorigSpine2.rotation.set(0,0,0);
-                                if (mixBones.mixamorigNeck) mixBones.mixamorigNeck.rotation.set(0,0,0);
-                                if (mixBones.mixamorigHead) mixBones.mixamorigHead.rotation.set(0,0,0);
+                                idleStateWeight = THREE.MathUtils.lerp(idleStateWeight, 0, 0.1);
+                            }
+
+                            const vel = torsoBody.velocity;
+                            const flop = 0.18; 
+                            
+                            // Calculate Physics Targets
+                            let pL_ArmZ = -1.2 + Math.min(1.5, vel.y * 0.15);
+                            let pL_ArmX = vel.z * 0.1;
+                            let pR_ArmZ = 1.2 - Math.min(1.5, vel.y * 0.15);
+                            let pR_ArmX = vel.z * 0.1;
+                            let pL_ElbowZ = Math.max(0, vel.y * 1.5);
+                            let pR_ElbowZ = Math.min(0, -vel.y * 1.5);
+                            let pL_UpLegX = Math.max(-1.5, vel.z * 0.1);
+                            let pR_UpLegX = Math.max(-1.5, vel.z * 0.1);
+                            let pL_LegX = Math.max(0, vel.y * 2);
+                            let pR_LegX = Math.max(0, vel.y * 2);
+                            let pSpineX = vel.z * 0.1;
+                            let pSpineZ = -vel.x * 0.1;
+                            let pNeckX = torsoBody.angularVelocity.x * 0.3;
+                            let pHeadX = torsoBody.angularVelocity.x * 0.4;
+                            let pHeadZ = torsoBody.angularVelocity.z * 0.4;
+
+                            // If nearly stationary but not idle yet, gently return to zero
+                            if (vel.length() <= 0.1) {
+                                pL_ArmZ = -1.2; pL_ArmX = 0;
+                                pR_ArmZ = 1.2; pR_ArmX = 0;
+                                pL_ElbowZ = 0; pR_ElbowZ = 0;
+                                pL_UpLegX = 0; pR_UpLegX = 0;
+                                pL_LegX = 0; pR_LegX = 0;
+                                pSpineX = 0; pSpineZ = 0;
+                                pNeckX = 0; pHeadX = 0; pHeadZ = 0;
+                            }
+
+                            // Calculate Procedural Breathing (Idle Targets)
+                            const breathTimer = time * 0.002;
+                            const breath = Math.sin(breathTimer);
+                            const sway = Math.cos(breathTimer * 0.5);
+                            
+                            const iL_ArmZ = -1.2 - (Math.max(0, breath) * 0.05);
+                            const iL_ArmX = sway * 0.05;
+                            const iR_ArmZ = 1.2 + (Math.max(0, breath) * 0.05);
+                            const iR_ArmX = -sway * 0.05;
+                            const iSpineX = breath * 0.03;
+                            const iHeadX = -breath * 0.02;
+
+                            // Apply Crossfaded Output
+                            if (mixBones.mixamorigLeftArm) {
+                                mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, THREE.MathUtils.lerp(pL_ArmZ, iL_ArmZ, idleStateWeight), flop);
+                                mixBones.mixamorigLeftArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.x, THREE.MathUtils.lerp(pL_ArmX, iL_ArmX, idleStateWeight), flop);
+                            }
+                            if (mixBones.mixamorigRightArm) {
+                                mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, THREE.MathUtils.lerp(pR_ArmZ, iR_ArmZ, idleStateWeight), flop);
+                                mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, THREE.MathUtils.lerp(pR_ArmX, iR_ArmX, idleStateWeight), flop);
+                            }
+                            if (mixBones.mixamorigLeftForeArm) mixBones.mixamorigLeftForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftForeArm.rotation.z, THREE.MathUtils.lerp(pL_ElbowZ, 0, idleStateWeight), flop);
+                            if (mixBones.mixamorigRightForeArm) mixBones.mixamorigRightForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightForeArm.rotation.z, THREE.MathUtils.lerp(pR_ElbowZ, 0, idleStateWeight), flop);
+                            
+                            if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, THREE.MathUtils.lerp(pL_UpLegX, 0, idleStateWeight), flop);
+                            if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, THREE.MathUtils.lerp(pR_UpLegX, 0, idleStateWeight), flop);
+                            if (mixBones.mixamorigLeftLeg) mixBones.mixamorigLeftLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftLeg.rotation.x, THREE.MathUtils.lerp(pL_LegX, 0, idleStateWeight), flop);
+                            if (mixBones.mixamorigRightLeg) mixBones.mixamorigRightLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightLeg.rotation.x, THREE.MathUtils.lerp(pR_LegX, 0, idleStateWeight), flop);
+
+                            if (mixBones.mixamorigSpine) {
+                                mixBones.mixamorigSpine.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.x, THREE.MathUtils.lerp(pSpineX, iSpineX, idleStateWeight), flop);
+                                mixBones.mixamorigSpine.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.z, THREE.MathUtils.lerp(pSpineZ, 0, idleStateWeight), flop);
+                            }
+                            if (mixBones.mixamorigNeck) mixBones.mixamorigNeck.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigNeck.rotation.x, THREE.MathUtils.lerp(pNeckX, 0, idleStateWeight), flop);
+                            if (mixBones.mixamorigHead) {
+                                mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, THREE.MathUtils.lerp(pHeadX, iHeadX, idleStateWeight), flop);
+                                mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, THREE.MathUtils.lerp(pHeadZ, 0, idleStateWeight), flop);
                             }
                         }
                         rendererRagdoll.render(sceneRagdoll, cameraRagdoll);
