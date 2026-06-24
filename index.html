@@ -8,14 +8,49 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='rgb(0,0,255)'/></svg>">
     
     <style>
-        html, body { margin: 0; padding: 0; background-color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; overscroll-behavior: none; }
+        /* --- Core Styling --- */
+        html, body { 
+            margin: 0; 
+            padding: 0;
+            background-color: #ffffff; 
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+            overscroll-behavior: none; 
+        }
 
         /* --- THE CUSTOM CURSOR --- */
-        .custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: rgb(0, 0, 255); border-radius: 50%; pointer-events: none; z-index: 99999; transform-origin: center center; opacity: 0; will-change: transform, opacity; transition: opacity 0.3s ease; }
+        .custom-cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 12px;
+            height: 12px;
+            background-color: rgb(0, 0, 255); 
+            border-radius: 50%;
+            pointer-events: none; 
+            z-index: 99999;
+            transform-origin: center center;
+            opacity: 0; 
+            will-change: transform, opacity; 
+            transition: opacity 0.3s ease; 
+        }
         .custom-cursor.visible { opacity: 1; }
 
         /* --- Minimalist Header Layout --- */
-        .top-nav { position: fixed; top: 0; left: 0; width: 100%; padding: 30px 50px; box-sizing: border-box; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; z-index: 100; pointer-events: none; mix-blend-mode: difference; }
+        .top-nav {
+            position: fixed; 
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 30px 50px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            z-index: 100; 
+            pointer-events: none; 
+            mix-blend-mode: difference;
+        }
+
         .nav-col { display: flex; pointer-events: auto; }
         .nav-col.left-col { justify-content: flex-start; }
         .nav-col.right-col { justify-content: flex-end; }
@@ -34,7 +69,20 @@
         #webgl-container canvas { display: block; width: 100%; height: 100%; }
 
         /* --- Interactive About Section --- */
-        #about-section { position: relative; width: 100%; height: 100vh; background-color: #f4f4f4; display: flex; align-items: center; justify-content: flex-end; padding: 0 10vw; box-sizing: border-box; overflow: hidden; z-index: 5; cursor: none !important; }
+        #about-section {
+            position: relative;
+            width: 100%;
+            height: 100vh; 
+            background-color: #f4f4f4; 
+            display: flex;
+            align-items: center;
+            justify-content: flex-end; 
+            padding: 0 10vw;
+            box-sizing: border-box;
+            overflow: hidden;
+            z-index: 5;
+            cursor: none !important; 
+        }
         #about-section * { cursor: none !important; }
         #ragdoll-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
@@ -276,7 +324,10 @@
         let dragIntersection = new THREE.Vector3();
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
-        let grabLocalOffset = new CANNON.Vec3();
+        
+        // This stores exactly where on the character you clicked (relative to his center)
+        let grabbedLocalOffset = new CANNON.Vec3();
+        let grabProxies = []; // Stores the raycastable spheres attached to limbs
 
         const instructionText = document.querySelector('.about-text-box .instruction');
         if (instructionText) {
@@ -312,8 +363,7 @@
             sceneRagdoll.add(floorMesh);
 
             world = new CANNON.World();
-            // GRAVITY TUNED TO -18
-            world.gravity.set(0, -18, 0); 
+            world.gravity.set(0, -18, 0); // PERFECTED GRAVITY
             world.broadphase = new CANNON.NaiveBroadphase();
             world.solver.iterations = 10; 
 
@@ -335,10 +385,16 @@
             ragdollGroup = new THREE.Group();
             sceneRagdoll.add(ragdollGroup);
 
+            // ENGINEER FIX: Build proxy spheres and attach them to every bone.
+            // These spheres are invisible but have opacity: 0, meaning the raycaster WILL hit them perfectly.
+            const proxyGeo = new THREE.SphereGeometry(0.35, 8, 8);
+            const proxyMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+
             const loader = new THREE.GLTFLoader();
             loader.load('./assets/simon-ps1.glb', (gltf) => {
                 const characterRoot = gltf.scene;
                 characterRoot.position.set(0, -0.8, 0); 
+                
                 characterRoot.traverse((child) => {
                     if (child.isMesh) {
                         child.castShadow = true;
@@ -348,7 +404,14 @@
                             child.material.map.minFilter = THREE.NearestFilter;
                         }
                     }
-                    if (child.isBone) { mixBones[child.name] = child; }
+                    if (child.isBone) { 
+                        mixBones[child.name] = child; 
+                        
+                        // Attach an invisible raycastable sphere to the bone
+                        const proxy = new THREE.Mesh(proxyGeo, proxyMat);
+                        child.add(proxy);
+                        grabProxies.push(proxy);
+                    }
                 });
                 ragdollGroup.add(characterRoot);
             });
@@ -362,26 +425,26 @@
                     
                     raycaster.setFromCamera(mouse, cameraRagdoll);
                     
-                    // ENGINEER FIX: Raycast directly against the character meshes, not a fake hitbox
-                    const intersects = raycaster.intersectObjects(ragdollGroup.children, true);
+                    // Raycast against the invisible proxy spheres located exactly on the limbs
+                    const intersects = raycaster.intersectObjects(grabProxies, false);
                     
                     if (intersects.length > 0) {
                         if (isDesktop) {
                             isDragging = true;
                             torsoBody.wakeUp();
                             
-                            // Calculate exact grab offset relative to torso center, accounting for torso rotation
-                            const hitPoint = new CANNON.Vec3(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
-                            grabLocalOffset = torsoBody.quaternion.inverse().vmult(hitPoint.vsub(torsoBody.position));
+                            // Calculate exact hit point relative to the torso's center of mass
+                            const hitPointC = new CANNON.Vec3(intersects[0].point.x, intersects[0].point.y, intersects[0].point.z);
+                            grabbedLocalOffset = torsoBody.quaternion.inverse().vmult(hitPointC.vsub(torsoBody.position));
 
                             dragPlane.setFromNormalAndCoplanarPoint(
                                 cameraRagdoll.getWorldDirection(new THREE.Vector3()),
                                 intersects[0].point
                             );
                         } else {
-                            const randomX = (Math.random() - 0.5) * 40;
-                            const randomZ = (Math.random() - 0.5) * 40;
-                            torsoBody.applyImpulse(new CANNON.Vec3(randomX, 40, randomZ), torsoBody.position);
+                            const randomX = (Math.random() - 0.5) * 30;
+                            const randomZ = (Math.random() - 0.5) * 30;
+                            torsoBody.applyImpulse(new CANNON.Vec3(randomX, 50, randomZ), torsoBody.position);
                         }
                     }
                 }
@@ -390,14 +453,13 @@
             window.addEventListener('pointermove', (e) => {
                 if (!isDragging || !isDesktop) return;
                 lastInteractionTime = Date.now();
+                
                 const rect = aboutCanvas.getBoundingClientRect();
                 mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
                 
                 raycaster.setFromCamera(mouse, cameraRagdoll);
-                if(raycaster.ray.intersectPlane(dragPlane, dragIntersection)) {
-                    torsoBody.wakeUp();
-                }
+                raycaster.ray.intersectPlane(dragPlane, dragIntersection);
             });
 
             window.addEventListener('pointerup', () => { isDragging = false; });
@@ -480,32 +542,26 @@
                             isDragging = false; 
                         }
 
-                        // --- THE 3D LIMB GRAB ALGORITHM ---
+                        // --- THE STABLE SPRING DRAG ALGORITHM ---
                         if (isDragging && torsoBody) {
-                            // Convert local grab point back to world space
-                            const currentWorldGrabPoint = torsoBody.position.vadd(torsoBody.quaternion.vmult(grabLocalOffset));
+                            torsoBody.wakeUp();
+
+                            // Where the grabbed limb currently is in the world
+                            const currentWorldGrabPoint = torsoBody.position.vadd(torsoBody.quaternion.vmult(grabbedLocalOffset));
                             
-                            const pullForce = new CANNON.Vec3(
-                                dragIntersection.x - currentWorldGrabPoint.x,
-                                dragIntersection.y - currentWorldGrabPoint.y,
-                                dragIntersection.z - currentWorldGrabPoint.z
-                            );
+                            // Calculate force vector
+                            const forceX = (dragIntersection.x - currentWorldGrabPoint.x) * 800; // Stiffness
+                            const forceY = (dragIntersection.y - currentWorldGrabPoint.y) * 800;
+                            const forceZ = (dragIntersection.z - currentWorldGrabPoint.z) * 800;
+                            const forceVec = new CANNON.Vec3(forceX, forceY, forceZ);
 
-                            // Pull the center of mass toward the mouse
-                            torsoBody.velocity.set(pullForce.x * 12, pullForce.y * 12, pullForce.z * 12);
+                            // Apply force exactly at the limb relative to the center of mass (Generates perfect torque)
+                            const relativeGrabPoint = currentWorldGrabPoint.vsub(torsoBody.position);
+                            torsoBody.applyForce(forceVec, relativeGrabPoint);
 
-                            // Calculate Torque to spin the limb toward the mouse
-                            const radius = currentWorldGrabPoint.vsub(torsoBody.position);
-                            const torque = new CANNON.Vec3();
-                            radius.cross(pullForce, torque);
-
-                            // Apply angular velocity safely
-                            const torqueStrength = 4;
-                            torsoBody.angularVelocity.set(
-                                Math.max(-20, Math.min(20, torque.x * torqueStrength)),
-                                Math.max(-20, Math.min(20, torque.y * torqueStrength)),
-                                Math.max(-20, Math.min(20, torque.z * torqueStrength))
-                            );
+                            // Add strong damping only while dragging to prevent explosive spinning
+                            torsoBody.velocity.mult(0.85, torsoBody.velocity);
+                            torsoBody.angularVelocity.mult(0.85, torsoBody.angularVelocity);
                         }
 
                         world.step(timeStep);
@@ -516,9 +572,8 @@
 
                             // --- PROCEDURAL IDLE VS RAGDOLL ENGINE ---
                             const timeSinceInteraction = Date.now() - lastInteractionTime;
-                            const isSittingStill = !isDragging && torsoBody.velocity.length() < 0.2;
+                            const isSittingStill = !isDragging && torsoBody.velocity.length() < 0.5;
                             
-                            // Crossfade weight: 1 = Idle, 0 = Physics Flop
                             if (timeSinceInteraction > 20000 && isSittingStill) {
                                 idleStateWeight = THREE.MathUtils.lerp(idleStateWeight, 1, 0.02);
                             } else {
@@ -528,7 +583,7 @@
                             const vel = torsoBody.velocity;
                             const flop = 0.18; 
                             
-                            // Calculate Physics Targets
+                            // Physics Targets
                             let pL_ArmZ = -1.2 + Math.min(1.5, vel.y * 0.15);
                             let pL_ArmX = vel.z * 0.1;
                             let pR_ArmZ = 1.2 - Math.min(1.5, vel.y * 0.15);
@@ -545,18 +600,14 @@
                             let pHeadX = torsoBody.angularVelocity.x * 0.4;
                             let pHeadZ = torsoBody.angularVelocity.z * 0.4;
 
-                            // If nearly stationary but not idle yet, gently return to zero
                             if (vel.length() <= 0.1) {
-                                pL_ArmZ = -1.2; pL_ArmX = 0;
-                                pR_ArmZ = 1.2; pR_ArmX = 0;
-                                pL_ElbowZ = 0; pR_ElbowZ = 0;
-                                pL_UpLegX = 0; pR_UpLegX = 0;
-                                pL_LegX = 0; pR_LegX = 0;
-                                pSpineX = 0; pSpineZ = 0;
+                                pL_ArmZ = -1.2; pL_ArmX = 0; pR_ArmZ = 1.2; pR_ArmX = 0;
+                                pL_ElbowZ = 0; pR_ElbowZ = 0; pL_UpLegX = 0; pR_UpLegX = 0;
+                                pL_LegX = 0; pR_LegX = 0; pSpineX = 0; pSpineZ = 0;
                                 pNeckX = 0; pHeadX = 0; pHeadZ = 0;
                             }
 
-                            // Calculate Procedural Breathing (Idle Targets)
+                            // Idle Targets (Breathing)
                             const breathTimer = time * 0.002;
                             const breath = Math.sin(breathTimer);
                             const sway = Math.cos(breathTimer * 0.5);
