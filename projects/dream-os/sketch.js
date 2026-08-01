@@ -14,45 +14,12 @@ ___________________________________________________________________________
       back to the main WebGL canvas.
 
 ___________________________________________________________________________
-
-    Credits:
-
-      Jessica's corner of cyberspace (mini taskbar Icons): https://www.raebear.net/computers/windows-98-icons/?utm_source=Pinterest&utm_medium=organic
-
-      (Windows 98 Ui Kit): https://www.figma.com/design/UbN0DJZWXYIR6Q9dAwa3M7/Windows-95-UI-Kit--Community-?node-id=0-1&p=f&t=MbMRaX8naMKabSBW-0
-
-      (Windows 98 Icons): https://win98icons.alexmeub.com/
-
-      (Wallpapers): https://wallpapercave.com/windows-98-background
-
-      (AOL Sounds): https://archive.org/details/AmericaOnlineVersion30ForWindows1996
-
-      (Windows Sounds): https://archive.org/details/win95sounds
-
-___________________________________________________________________________
-
-    Inspiration:
-
-      https://emupedia.net/beta/emuos/
-        
-___________________________________________________________________________
-
-    Tools I used:
-
-      Photoshop (Heightmaps)
-      Illustrator (Sticker designs)
-      Blender (PC frame + Stickers & Dithering Pipeline)
-      Ditherinator (Custom windows Dithering for wallpapers)
-      Ableton (Song creation)
-    
 */
-
 
 const CANVAS_W = 800;
 const CANVAS_H = 600;
 const ICON_SIZE = 42; //Iconparticle size
 const INTERACTION_RADIUS = 100; //Mouse force for particles
-
 
 /////////////////////////AUDIO MIXER (OS)
 const MUSIC_VOLUME = 0.6;
@@ -66,14 +33,12 @@ const SEARCH_VOLUME = 0.2;
 const AOE2_VOLUME = 0.6;
 const BIOS_VOLUME = 0.5;
 
-
 /////////////////////////AUDIO MIXER (EGG GAME)
 const EGG_MUSIC_VOLUME = 0.6;
 const EGG_POP_VOLUME = 0.8;
 const EGG_DEATH_VOLUME = 0.6;
 const EGG_SIREN_VOLUME = 0.4;
 const EGG_GAME_OVER_VOLUME = 0.6;
-
 
 /////////////////////////EGG GAME DIFFICULTY CONFIG
 const EGG_BASE_SPEED = 4.0;
@@ -84,21 +49,18 @@ const EGG_BASE_SPAWN_RATE = 80;
 const EGG_MIN_SPAWN_RATE = 20; 
 const EGG_SPAWN_RAMP = 2;
 
-
 /////////////////////////CRT SHADER CONFIG
-const CRT_CURVATURE = 8.8;
+const CRT_CURVATURE = 8.8; // Relaxed from 7 to reduce overscan cropping
 const CRT_FIT = true;
 const CRT_SCANLINE_DENSITY = 4;
 const CRT_SCANLINE_OPACITY = 0.05;
 const CRT_CHROMATIC_ABERRATION = 0.0017;
 const CRT_VIGNETTE_AMOUNT = 1.2;
 
-
 /////////////////////////UI BLEED COMPENSATION
 const TASKBAR_PAD_X = 0;
-const TASKBAR_PAD_BOTTOM = 0;
+const TASKBAR_PAD_BOTTOM = 0; // Flush with Y = 600 bottom
 const TASKBAR_HEIGHT = 38;
-
 
 //Global Audio variables
 let bgMusic;
@@ -107,11 +69,9 @@ let sndInternetExplorer, sndTree, sndScan, sndSearch, sndAOE2;
 let sndBiosBeep;
 let bootReverb;
 
-
 /////////////////////////SHADER & RENDER GLOBALS
 let crtShader;
 let pg; //2D buffer
-
 
 /////////////////////////EGG GAME GLOBALS
 let video;
@@ -134,7 +94,6 @@ let sndPopEgg;
 let sndEggDeath = [];
 let sndDubSiren;
 let sndGameOver;
-
 
 /////////////////////////NOTEPAD SYSTEM
 let notepad = {
@@ -161,7 +120,6 @@ let notepad = {
   maxChars: 2000,
   backspaceTimer: 0,
 };
-
 
 /////////////////////////Global State
 let state = "POWER_OFF";
@@ -209,7 +167,6 @@ let cursorImages = [];
 let currentCursorIndex = 0;
 let hasUnlockedCustomCursor = false;
 
-
 /////////////////////////PRELOAD
 function preload() {
   crtShader = loadShader("GLSL/default.vert", "GLSL/crt.frag");
@@ -242,7 +199,6 @@ function preload() {
   sndSearch = loadSound("assets/audio/oneshots/IM.wav");
   sndAOE2 = loadSound("assets/audio/oneshots/roggan.mp3");
 
-  //Load Window Frames
   for (let i = 1; i <= 5; i++) {
     windowFrameImages.push(
       loadImage(`assets/windowframes/Window_frame_${i}.png`)
@@ -315,30 +271,25 @@ function preload() {
     );
   }
 
-  //Load ML5
   handPose = ml5.handPose();
 }
-
 
 /////////////////////////SETUP
 function setup() {
   let canvas = createCanvas(CANVAS_W, CANVAS_H, WEBGL);
   canvas.parent("canvas-container");
 
-  //Linear filtering to nearest-neighbor pixel rendering
   drawingContext.imageSmoothingEnabled = false;
 
   frameRate(60);
-  noCursor(); //Hide OG cursor
+  noCursor();
 
-  //2D buffer
   pg = createGraphics(CANVAS_W, CANVAS_H);
   pg.drawingContext.imageSmoothingEnabled = false;
 
   bootReverb = new p5.Reverb();
   bootReverb.process(sndStartup, 4, 1);
 
-  //Desktop grid for apps
   let startX = 80;
   let startY = 80;
   let spacingY = 90;
@@ -357,8 +308,6 @@ function setup() {
   relocateHiddenIcon();
   initParticleGrid();
 
-
-  //Load saved note from the browsers local storage API
   let savedNote = localStorage.getItem("os98_notepad");
   if (savedNote !== null) {
     notepad.text = savedNote;
@@ -366,12 +315,10 @@ function setup() {
   updateNotepadLayout();
 }
 
-//ML5 callback: Update hands array if ml5 detects a hand
 function handsFound(results) {
   hands = results;
 }
 
-/////////////////////////INIT PARTICLES
 function initParticleGrid() {
   particles = [];
   let cols = Math.ceil(width / ICON_SIZE);
@@ -393,17 +340,12 @@ function initParticleGrid() {
   }
 }
 
-//Eggmania icon to random location
 function relocateHiddenIcon() {
   targetHiddenPos = createVector(
     random(150, width - 150),
     random(120, height - 150)
   );
 }
-
-
-/////////////////////////SYSTEM REBOOT FUNCTION
-//Complete reset: states, flags, audio & visual arrays
 
 function resetSystem() {
   state = "BOOTING";
@@ -439,7 +381,6 @@ function resetSystem() {
   if (sndDubSiren && sndDubSiren.isPlaying()) sndDubSiren.stop();
   if (sndGameOver && sndGameOver.isPlaying()) sndGameOver.stop();
 
-  //Shut down the webcam
   if (video) {
     video.remove();
     video = null;
@@ -737,7 +678,7 @@ function mouseWheel(event) {
   }
 }
 
-/////////////////////////INTERACTION FUNCTIONS
+/////////////////////////INTERACTION FUNCTIONS (SYNCHRONIZED WITH 56px SAFE INSET)
 function mousePressed() {
   if (getAudioContext().state !== "running") userStartAudio();
   if (state === "POWER_OFF") {
@@ -798,18 +739,18 @@ function mousePressed() {
   if (state === "DESKTOP" || state === "SIMULATION") {
     // TASKBAR CLICKS
     if (m.y > barY && m.y < barY + TASKBAR_HEIGHT && m.x > btnX + btnW) {
-      let tabX = btnX + btnW + 6; // Starts cleanly at X = 130
+      let tabX = btnX + btnW + 6;
 
       // Notepad Taskbar tab hitbox
-     if (m.x > tabX && m.x < tabX + 108) {
+      if (m.x > tabX && m.x < tabX + 108) {
         notepad.isMinimized = !notepad.isMinimized;
         if (!notepad.isMinimized) notepad.isActive = true;
         return;
       }
-      tabX += 112; // 108px width + 4px snug gap
+      tabX += 112;
 
       // Vote Taskbar Hitbox
-     if (m.x > tabX && m.x < tabX + 108) {
+      if (m.x > tabX && m.x < tabX + 108) {
         let px = random(200, width - 350);
         let py = random(150, height - 300);
         popups.push(new WindowFrame(px, py, windowFrameImages[4]));
@@ -825,11 +766,11 @@ function mousePressed() {
           notepad.isActive = false;
           return;
         }
-        tabX += 100; // 96px width + 4px gap
+        tabX += 100;
       }
       return;
     }
-      
+
     if (!notepad.isMinimized) {
       if (notepad.showHelp) {
         let hW = 280;
@@ -1221,7 +1162,6 @@ function mouseReleased() {
       if (sndGameOver && sndGameOver.isPlaying()) sndGameOver.stop();
       state = "DESKTOP";
       if (bgMusic && !bgMusic.isPlaying()) bgMusic.loop();
-      // Ensure video shuts down if navigating straight back to desktop
       if (video) {
         video.remove();
         video = null;
@@ -1230,7 +1170,7 @@ function mouseReleased() {
   }
 }
 
-/////////////////////////WINDOWS NAV BAR ENGINE
+/////////////////////////WINDOWS NAV BAR ENGINE (WITH 56px SAFE INSET)
 function drawWindowsMenuBar() {
   pg.rectMode(CORNER);
 
@@ -1274,7 +1214,7 @@ function drawWindowsMenuBar() {
     pg.text("Start", btnX + btnW / 2, btnY + btnH / 2);
   }
 
-  let tabX = btnX + btnW + 6; // X = 130
+  let tabX = btnX + btnW + 6;
 
   let noteActive = !notepad.isMinimized;
   pg.fill(noteActive ? 220 : 192);
@@ -1303,7 +1243,7 @@ function drawWindowsMenuBar() {
   pg.textSize(10);
   pg.textAlign(LEFT, CENTER);
   pg.text("CuteMessage...", tabX + 28, btnY + btnH / 2);
-  tabX += 112; // Snug 4px gap to Vote tab (X = 242)
+  tabX += 112;
 
   pg.fill(192);
   pg.rect(tabX, btnY, 108, btnH);
@@ -1324,7 +1264,7 @@ function drawWindowsMenuBar() {
   pg.textSize(10);
   pg.textAlign(LEFT, CENTER);
   pg.text("PLS VOTE", tabX + 28, btnY + btnH / 2);
-  tabX += 112; // Snug 4px gap to dynamically opened windows (X = 354)
+  tabX += 112;
 
   let tabTexts = ["Did u", "catch", "the egg yet", "buddy"];
 
@@ -1359,14 +1299,14 @@ function drawWindowsMenuBar() {
     pg.textSize(10);
     pg.textAlign(LEFT, CENTER);
     pg.text(tabTexts[i] || "Window", tabX + 26, btnY + btnH / 2);
-    tabX += 100; // 96px width + 4px gap
+    tabX += 100;
   }
 
   let trayW = 74;
   let trayH = TASKBAR_HEIGHT - 8;
-  let trayX = CANVAS_W - 56 - trayW; // X = 670 to 744 (56px Right Safe Inset)
+  let trayX = CANVAS_W - 56 - trayW; // Clock positioned inside 56px right inset
   let trayY = barY + 4;
-    
+
   pg.fill(192);
   pg.rect(trayX, trayY, trayW, trayH);
 
@@ -1388,7 +1328,6 @@ function drawWindowsMenuBar() {
   pg.textAlign(CENTER, CENTER);
   pg.text(timeText, trayX + trayW / 2, trayY + trayH / 2);
 }
-
 
 /////////////////////////NOTEPAD WIDGET ENGINE
 function drawNotepad() {
@@ -1988,7 +1927,6 @@ function drawEggGame() {
     if (points > eggHighscore) eggHighscore = points;
     state = "EGG_GAMEOVER";
     
-    // RESTORED: Play the game over sound!
     if (sndGameOver && !sndGameOver.isPlaying()) {
       sndGameOver.setVolume(EGG_GAME_OVER_VOLUME);
       sndGameOver.play();
@@ -2072,22 +2010,22 @@ function drawBootSequence() {
     pg.textFont("monospace");
     pg.textSize(14);
 
-    let x = 48;
+    let x = 48; // Title safe area margin
     let y = 28;
 
     if (elapsed > 100) {
       pg.fill(50, 50, 255);
       pg.noStroke();
-      pg.rect(20, 22, 14, 14);
-      pg.triangle(15, 30, 20, 25, 20, 35);
-      pg.triangle(15, 46, 28, 38, 28, 46);
+      pg.rect(48, 30, 14, 14);
+      pg.triangle(43, 38, 48, 33, 48, 43);
+      pg.triangle(43, 54, 56, 46, 56, 54);
 
       pg.fill(200);
-      pg.text("Award Modular BIOS v4.20PG, A Random Energy Ally", 45, y);
+      pg.text("Award Modular BIOS v4.20PG, A Random Energy Ally", 73, y);
       y += 16;
       pg.text(
         "Copyright (C) 1984-2026, Burg Giebichenstein Software, Inc.",
-        45,
+        73,
         y
       );
       y += 32;
@@ -2127,7 +2065,6 @@ function drawBootSequence() {
       pg.text("Starting MS-DOS...", x, y);
     }
 
-    //Burg ASCII Logo
     if (elapsed > 100) {
       pg.textAlign(LEFT, TOP);
       let asciiX = CANVAS_W - 220;
@@ -2215,7 +2152,6 @@ function drawErrorScreen() {
   }
 }
 
-//Spawns in the desktop icons with a delay
 function drawStaticApps() {
   let elapsedDesktop =
     state === "DESKTOP" || state === "SIMULATION"
@@ -2258,7 +2194,6 @@ function drawIconLabel(txt, pos, scaleOffset = 1) {
   pg.text(txt, pos.x, pos.y + (ICON_SIZE * scaleOffset) / 2 + 3);
 }
 
-//Windowstamping 
 function spawnRandomPopup() {
   let px = random(200, width - 350);
   let py = random(150, height - 300);
@@ -2376,7 +2311,6 @@ class Particle {
     let arriveForce = this.arrive(this.target);
     this.applyForce(arriveForce);
 
-    //Perlin noise for floating movement
     let noiseScale = 0.005;
     let nAngle =
       noise(
@@ -2390,7 +2324,6 @@ class Particle {
     noiseForce.mult(0.6);
     this.applyForce(noiseForce);
 
-    //Mouse repelling physics
     let dx = this.pos.x - mouseX;
     let dy = this.pos.y - mouseY;
     let distSq = dx * dx + dy * dy;
@@ -2434,5 +2367,43 @@ class Particle {
     let steer = p5.Vector.sub(desired, this.vel);
     steer.limit(this.maxForce * 1.5);
     return steer;
+  }
+}
+
+// ============================================================================
+// AUDIO FADE & SLEEP RECEIVER
+// ============================================================================
+window.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "OS_VISIBILITY") return;
+
+  let vis = constrain(event.data.value, 0, 1);
+  outputVolume(vis, 0.1);
+
+  if (vis === 0 && state !== "POWER_OFF") {
+    shutdownSystemToPowerOff();
+  }
+});
+
+function shutdownSystemToPowerOff() {
+  if (state === "POWER_OFF") return;
+  state = "POWER_OFF";
+
+  if (bgMusic && bgMusic.isPlaying()) bgMusic.stop();
+  if (bgMusicEgg && bgMusicEgg.isPlaying()) bgMusicEgg.stop();
+  if (sndStartup && sndStartup.isPlaying()) sndStartup.stop();
+  if (sndBiosBeep && sndBiosBeep.isPlaying()) sndBiosBeep.stop();
+  if (sndRecycle && sndRecycle.isPlaying()) sndRecycle.stop();
+  if (sndInternetExplorer && sndInternetExplorer.isPlaying())
+    sndInternetExplorer.stop();
+  if (sndTree && sndTree.isPlaying()) sndTree.stop();
+  if (sndScan && sndScan.isPlaying()) sndScan.stop();
+  if (sndSearch && sndSearch.isPlaying()) sndSearch.stop();
+  if (sndAOE2 && sndAOE2.isPlaying()) sndAOE2.stop();
+  if (sndDubSiren && sndDubSiren.isPlaying()) sndDubSiren.stop();
+  if (sndGameOver && sndGameOver.isPlaying()) sndGameOver.stop();
+
+  if (video) {
+    video.remove();
+    video = null;
   }
 }
