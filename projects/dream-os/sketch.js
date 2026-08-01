@@ -2163,8 +2163,8 @@ function drawBootSequence() {
     if (elapsed > 800) {
       pg.textAlign(LEFT, BOTTOM);
       pg.fill(200);
-      pg.text("I need to charge soon", 20, CANVAS_H - 40);
-      pg.text("13/12/97-82437VX-l8N1GHt-LASa6Na-42", 20, CANVAS_H - 20);
+      pg.text("I need to charge soon", 48, CANVAS_H - 40);
+      pg.text("13/12/97-82437VX-l8N1GHt-LASa6Na-42", 48, CANVAS_H - 20);
     }
   } else if (elapsed < biosLength + 4000) {
     pg.textFont(fontReg);
