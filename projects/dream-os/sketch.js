@@ -95,8 +95,8 @@ const CRT_VIGNETTE_AMOUNT = 1.2;
 
 
 /////////////////////////UI BLEED COMPENSATION
-const TASKBAR_PAD_X = 0;
-const TASKBAR_PAD_BOTTOM = 5;
+const TASKBAR_PAD_X = 12;
+const TASKBAR_PAD_BOTTOM = 18;
 const TASKBAR_HEIGHT = 38;
 
 
