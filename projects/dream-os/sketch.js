@@ -1246,7 +1246,7 @@ function drawWindowsMenuBar() {
   pg.strokeWeight(1);
   pg.line(barX, barY, barX + barW, barY);
 
-  let btnX = 36;
+  let btnX = 56;
   let btnY = barY + 6;
   let btnW = 68;
   let btnH = TASKBAR_HEIGHT - 12;
@@ -1274,11 +1274,11 @@ function drawWindowsMenuBar() {
     pg.text("Start", btnX + btnW / 2, btnY + btnH / 2);
   }
 
-  let tabX = btnX + btnW + 6; // X = 110
+  let tabX = btnX + btnW + 6; // X = 130
 
   let noteActive = !notepad.isMinimized;
   pg.fill(noteActive ? 220 : 192);
-  pg.rect(tabX, btnY, 108, btnH); // Width updated to 108
+  pg.rect(tabX, btnY, 108, btnH);
   if (noteActive) {
     pg.stroke(128);
     pg.line(tabX, btnY, tabX + 108, btnY);
@@ -1303,10 +1303,10 @@ function drawWindowsMenuBar() {
   pg.textSize(10);
   pg.textAlign(LEFT, CENTER);
   pg.text("CuteMessage...", tabX + 28, btnY + btnH / 2);
-  tabX += 112; // Snug 4px gap to next tab (X = 222)
+  tabX += 112; // Snug 4px gap to Vote tab (X = 242)
 
   pg.fill(192);
-  pg.rect(tabX, btnY, 108, btnH); // Width updated to 108
+  pg.rect(tabX, btnY, 108, btnH);
   pg.stroke(255);
   pg.line(tabX, btnY, tabX + 108, btnY);
   pg.line(tabX, btnY, tabX, btnY + btnH);
@@ -1324,14 +1324,14 @@ function drawWindowsMenuBar() {
   pg.textSize(10);
   pg.textAlign(LEFT, CENTER);
   pg.text("PLS VOTE", tabX + 28, btnY + btnH / 2);
-  tabX += 112; // Snug 4px gap to dynamically opened windows (X = 334)
+  tabX += 112; // Snug 4px gap to dynamically opened windows (X = 354)
 
   let tabTexts = ["Did u", "catch", "the egg yet", "buddy"];
 
   for (let i = 0; i < popups.length; i++) {
     let isFocused = i === popups.length - 1 && notepad.isMinimized;
     pg.fill(isFocused ? 220 : 192);
-    pg.rect(tabX, btnY, 96, btnH); // Width updated to 96
+    pg.rect(tabX, btnY, 96, btnH);
 
     if (isFocused) {
       pg.stroke(128);
@@ -1364,7 +1364,7 @@ function drawWindowsMenuBar() {
 
   let trayW = 74;
   let trayH = TASKBAR_HEIGHT - 8;
-  let trayX = CANVAS_W - 36 - trayW; // X = 690 (Right edge sits at 764)
+  let trayX = CANVAS_W - 56 - trayW; // X = 670 to 744 (56px Right Safe Inset)
   let trayY = barY + 4;
     
   pg.fill(192);
