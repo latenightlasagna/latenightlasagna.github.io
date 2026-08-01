@@ -1246,9 +1246,9 @@ function drawWindowsMenuBar() {
   pg.strokeWeight(1);
   pg.line(barX, barY, barX + barW, barY);
 
-  let btnX = barX + 10;
+  let btnX = 36;
   let btnY = barY + 6;
-  let btnW = 70;
+  let btnW = 68;
   let btnH = TASKBAR_HEIGHT - 12;
 
   if (imgStartBtn) {
@@ -1274,24 +1274,24 @@ function drawWindowsMenuBar() {
     pg.text("Start", btnX + btnW / 2, btnY + btnH / 2);
   }
 
-  let tabX = barX + 80;
+  let tabX = btnX + btnW + 6; // X = 110
 
   let noteActive = !notepad.isMinimized;
   pg.fill(noteActive ? 220 : 192);
-  pg.rect(tabX, btnY, 110, btnH);
+  pg.rect(tabX, btnY, 108, btnH); // Width updated to 108
   if (noteActive) {
     pg.stroke(128);
-    pg.line(tabX, btnY, tabX + 110, btnY);
+    pg.line(tabX, btnY, tabX + 108, btnY);
     pg.line(tabX, btnY, tabX, btnY + btnH);
     pg.stroke(0);
-    pg.line(tabX, btnY - 1, tabX + 111, btnY - 1);
+    pg.line(tabX, btnY - 1, tabX + 109, btnY - 1);
   } else {
     pg.stroke(255);
-    pg.line(tabX, btnY, tabX + 110, btnY);
+    pg.line(tabX, btnY, tabX + 108, btnY);
     pg.line(tabX, btnY, tabX, btnY + btnH);
     pg.stroke(128);
-    pg.line(tabX + 110, btnY, tabX + 110, btnY + btnH);
-    pg.line(tabX, btnY + btnH, tabX + 110, btnY + btnH);
+    pg.line(tabX + 108, btnY, tabX + 108, btnY + btnH);
+    pg.line(tabX, btnY + btnH, tabX + 108, btnY + btnH);
   }
   if (imgNotepadTab) {
     pg.imageMode(CENTER);
@@ -1303,16 +1303,16 @@ function drawWindowsMenuBar() {
   pg.textSize(10);
   pg.textAlign(LEFT, CENTER);
   pg.text("CuteMessage...", tabX + 28, btnY + btnH / 2);
-  tabX += 115;
+  tabX += 112; // Snug 4px gap to next tab (X = 222)
 
   pg.fill(192);
-  pg.rect(tabX, btnY, 110, btnH);
+  pg.rect(tabX, btnY, 108, btnH); // Width updated to 108
   pg.stroke(255);
-  pg.line(tabX, btnY, tabX + 110, btnY);
+  pg.line(tabX, btnY, tabX + 108, btnY);
   pg.line(tabX, btnY, tabX, btnY + btnH);
   pg.stroke(128);
-  pg.line(tabX + 110, btnY, tabX + 110, btnY + btnH);
-  pg.line(tabX, btnY + btnH, tabX + 110, btnY + btnH);
+  pg.line(tabX + 108, btnY, tabX + 108, btnY + btnH);
+  pg.line(tabX, btnY + btnH, tabX + 108, btnY + btnH);
 
   if (imgVoteTab) {
     pg.imageMode(CENTER);
@@ -1324,28 +1324,28 @@ function drawWindowsMenuBar() {
   pg.textSize(10);
   pg.textAlign(LEFT, CENTER);
   pg.text("PLS VOTE", tabX + 28, btnY + btnH / 2);
-  tabX += 115;
+  tabX += 112; // Snug 4px gap to dynamically opened windows (X = 334)
 
   let tabTexts = ["Did u", "catch", "the egg yet", "buddy"];
 
   for (let i = 0; i < popups.length; i++) {
     let isFocused = i === popups.length - 1 && notepad.isMinimized;
     pg.fill(isFocused ? 220 : 192);
-    pg.rect(tabX, btnY, 100, btnH);
+    pg.rect(tabX, btnY, 96, btnH); // Width updated to 96
 
     if (isFocused) {
       pg.stroke(128);
-      pg.line(tabX, btnY, tabX + 100, btnY);
+      pg.line(tabX, btnY, tabX + 96, btnY);
       pg.line(tabX, btnY, tabX, btnY + btnH);
       pg.stroke(0);
-      pg.line(tabX, btnY - 1, tabX + 101, btnY - 1);
+      pg.line(tabX, btnY - 1, tabX + 97, btnY - 1);
     } else {
       pg.stroke(255);
-      pg.line(tabX, btnY, tabX + 100, btnY);
+      pg.line(tabX, btnY, tabX + 96, btnY);
       pg.line(tabX, btnY, tabX, btnY + btnH);
       pg.stroke(128);
-      pg.line(tabX + 100, btnY, tabX + 100, btnY + btnH);
-      pg.line(tabX, btnY + btnH, tabX + 100, btnY + btnH);
+      pg.line(tabX + 96, btnY, tabX + 96, btnY + btnH);
+      pg.line(tabX, btnY + btnH, tabX + 96, btnY + btnH);
     }
 
     if (imgNotepadTab) {
@@ -1359,14 +1359,14 @@ function drawWindowsMenuBar() {
     pg.textSize(10);
     pg.textAlign(LEFT, CENTER);
     pg.text(tabTexts[i] || "Window", tabX + 26, btnY + btnH / 2);
-    tabX += 105;
+    tabX += 100; // 96px width + 4px gap
   }
 
   let trayW = 74;
   let trayH = TASKBAR_HEIGHT - 8;
-  let trayX = barX + barW - trayW - 6;
+  let trayX = CANVAS_W - 36 - trayW; // X = 690 (Right edge sits at 764)
   let trayY = barY + 4;
-
+    
   pg.fill(192);
   pg.rect(trayX, trayY, trayW, trayH);
 
