@@ -184,6 +184,34 @@
         <canvas id="ragdoll-canvas"></canvas>
     </section>
 
+    <section id="dream-os-section" class="os-section">
+        <div class="os-header">
+            <div class="os-title-area">
+                <h2>DREAM — OS</h2>
+                <p>Interactive Windows 98 Simulation & AI Hand-Tracking Game</p>
+            </div>
+            <div class="os-tech-stack">
+                <span class="tech-tag">p5.js</span>
+                <span class="tech-tag">GLSL CRT Shader</span>
+                <span class="tech-tag">ml5.js HandPose</span>
+                <span class="tech-tag">WebGL</span>
+            </div>
+        </div>
+        
+        <div class="os-iframe-container">
+            <!-- 
+              loading="lazy" ensures the 3D shader and ML5 AI models 
+              do NOT consume CPU/GPU until scrolled into view.
+            -->
+            <iframe 
+                src="projects/dream-os/index.html" 
+                title="Dream OS Windows 98 Emulator"
+                loading="lazy"
+                allow="camera; microphone; autoplay">
+            </iframe>
+        </div>
+    </section>
+  
     <section id="work-section" class="video-section">
         <h2 class="section-headline">SELECTED WORKS</h2>
         <div class="video-grid">
