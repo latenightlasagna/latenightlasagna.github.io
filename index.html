@@ -245,7 +245,7 @@
         const lenis = new Lenis({ lerp: 0.08, smoothWheel: true });
     </script>
 
-    <!-- WEBGL LOGIC: MODERN ARTICULATED MULTI-BODY RAGDOLL -->
+    <!-- WEBGL LOGIC: HERO + MULTI-BODY RAGDOLL SIMULATION -->
     <script>
         // --- 0. INTERACTION TIMER (Idle Fallback) ---
         let lastInteractionTime = Date.now();
@@ -393,17 +393,42 @@
             world.broadphase = new CANNON.NaiveBroadphase();
             world.solver.iterations = 15; // Increased iterations for stable multi-body joints
 
-            const floorBody = new CANNON.Body({ mass: 0 }); 
-            floorBody.addShape(new CANNON.Plane());
+            const floorBody = new CANNON.Body({ 
+                type: CANNON.Body.STATIC,
+                shape: new CANNON.Plane()
+            }); 
             floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
             world.addBody(floorBody);
 
-            // Kinematic anchor body for mouse dragging
-            mouseConstraintBody = new CANNON.Body({ mass: 0 });
+            // Kinematic anchor body for mouse dragging (KINEMATIC prevents solver destabilization)
+            mouseConstraintBody = new CANNON.Body({ 
+                type: CANNON.Body.KINEMATIC,
+                mass: 0 
+            });
             world.addBody(mouseConstraintBody);
 
             ragdollGroup = new THREE.Group();
             sceneRagdoll.add(ragdollGroup);
+
+            // --- CEILING DROP TRIGGER ON SECTION ENTRY ---
+            function triggerCeilingDrop() {
+                if (ragdollBodies.length === 0) return;
+                ragdollBodies.forEach(body => {
+                    body.wakeUp();
+                    body.position.y = Math.max(body.position.y, 8.0); // Snap above the floor
+                    body.velocity.set(0, 0, 0);
+                    body.angularVelocity.set(0, 0, 0);
+                });
+            }
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        triggerCeilingDrop();
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(aboutSectionElement);
 
             // --- BUILD ARTICULATED SKELETON ON GLTF LOAD ---
             const loader = new THREE.GLTFLoader();
@@ -452,7 +477,7 @@
 
                     const body = new CANNON.Body({
                         mass: cfg.mass,
-                        position: new CANNON.Vec3(worldPos.x, worldPos.y + 4.0, worldPos.z), // Drop from sky
+                        position: new CANNON.Vec3(worldPos.x, worldPos.y + 4.0, worldPos.z), // Initial Ceiling drop height
                         quaternion: new CANNON.Quaternion(worldQuat.x, worldQuat.y, worldQuat.z, worldQuat.w),
                         linearDamping: 0.05,
                         angularDamping: 0.10 // Low damping = liquid floppiness
