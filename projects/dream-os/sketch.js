@@ -757,10 +757,10 @@ function mousePressed() {
   let clickedOnElement = false;
 
   let barY = CANVAS_H - TASKBAR_HEIGHT - TASKBAR_PAD_BOTTOM;
-    let btnX = 36;
-    let btnY = barY + 4;
-    let btnW = 68;
-    let btnH = TASKBAR_HEIGHT - 8;
+  let btnX = 56;
+  let btnY = barY + 4;
+  let btnW = 68;
+  let btnH = TASKBAR_HEIGHT - 8;
 
   if (
     state === "DESKTOP" ||
@@ -798,10 +798,10 @@ function mousePressed() {
   if (state === "DESKTOP" || state === "SIMULATION") {
     // TASKBAR CLICKS
     if (m.y > barY && m.y < barY + TASKBAR_HEIGHT && m.x > btnX + btnW) {
-      let tabX = btnX + btnW + 6; // Starts cleanly at X = 110
+      let tabX = btnX + btnW + 6; // Starts cleanly at X = 130
 
       // Notepad Taskbar tab hitbox
-      if (m.x > tabX && m.x < tabX + 108) {
+     if (m.x > tabX && m.x < tabX + 108) {
         notepad.isMinimized = !notepad.isMinimized;
         if (!notepad.isMinimized) notepad.isActive = true;
         return;
@@ -809,7 +809,7 @@ function mousePressed() {
       tabX += 112; // 108px width + 4px snug gap
 
       // Vote Taskbar Hitbox
-      if (m.x > tabX && m.x < tabX + 108) {
+     if (m.x > tabX && m.x < tabX + 108) {
         let px = random(200, width - 350);
         let py = random(150, height - 300);
         popups.push(new WindowFrame(px, py, windowFrameImages[4]));
