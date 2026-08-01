@@ -86,7 +86,7 @@ const EGG_SPAWN_RAMP = 2;
 
 
 /////////////////////////CRT SHADER CONFIG
-const CRT_CURVATURE = 7;
+const CRT_CURVATURE = 8.8;
 const CRT_FIT = true;
 const CRT_SCANLINE_DENSITY = 4;
 const CRT_SCANLINE_OPACITY = 0.05;
