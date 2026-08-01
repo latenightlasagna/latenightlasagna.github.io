@@ -798,38 +798,38 @@ function mousePressed() {
   if (state === "DESKTOP" || state === "SIMULATION") {
     // TASKBAR CLICKS
     if (m.y > barY && m.y < barY + TASKBAR_HEIGHT && m.x > btnX + btnW) {
-      let tabX = TASKBAR_PAD_X + 80;
+      let tabX = btnX + btnW + 6; // Starts cleanly at X = 110
 
-      //Notepad Taskbar tab hitbox
-      if (m.x > tabX && m.x < tabX + 110) {
+      // Notepad Taskbar tab hitbox
+      if (m.x > tabX && m.x < tabX + 108) {
         notepad.isMinimized = !notepad.isMinimized;
         if (!notepad.isMinimized) notepad.isActive = true;
         return;
       }
-      tabX += 115;
+      tabX += 112; // 108px width + 4px snug gap
 
-      //Vote Taskbar Hitbox
-      if (m.x > tabX && m.x < tabX + 110) {
+      // Vote Taskbar Hitbox
+      if (m.x > tabX && m.x < tabX + 108) {
         let px = random(200, width - 350);
         let py = random(150, height - 300);
-        popups.push(new WindowFrame(px, py, windowFrameImages[4])); // Spawns Window_frame_5
+        popups.push(new WindowFrame(px, py, windowFrameImages[4]));
         lastWindowActivity = millis();
         return;
       }
-      tabX += 115;
+      tabX += 112;
 
       for (let i = 0; i < popups.length; i++) {
-        if (m.x > tabX && m.x < tabX + 100) {
+        if (m.x > tabX && m.x < tabX + 96) {
           let selectedWindow = popups.splice(i, 1)[0];
           popups.push(selectedWindow);
           notepad.isActive = false;
           return;
         }
-        tabX += 105;
+        tabX += 100; // 96px width + 4px gap
       }
       return;
     }
-
+      
     if (!notepad.isMinimized) {
       if (notepad.showHelp) {
         let hW = 280;
