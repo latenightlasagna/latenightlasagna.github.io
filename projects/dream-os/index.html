@@ -39,14 +39,14 @@
       z-index: 10;
     }
 
-    /* Precisely mapped to your CRT bezel cutout ratios */
+    /* Calibrated for the 56px inner bezel opening and 38px bottom taskbar */
     #canvas-container {
       position: absolute;
       z-index: 1;
       background-color: #000;
-      top: 13.4%;    
-      left: 10.8%;   
-      width: 78.4%;  
+      top: 13.4%;
+      left: 10.8%;
+      width: 78.4%;
       height: 73.2%;
     }
 
@@ -62,7 +62,6 @@
 
   <div class="monitor-wrapper">
     <div id="canvas-container"></div>
-    <!-- Make sure ComputerFrame.png is inside projects/dream-os/assets/ -->
     <img src="assets/ComputerFrame.png" class="monitor-bezel" alt="CRT Monitor">
   </div>
 
