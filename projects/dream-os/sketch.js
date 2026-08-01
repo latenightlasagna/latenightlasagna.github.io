@@ -757,10 +757,10 @@ function mousePressed() {
   let clickedOnElement = false;
 
   let barY = CANVAS_H - TASKBAR_HEIGHT - TASKBAR_PAD_BOTTOM;
-  let btnX = TASKBAR_PAD_X + 4;
-  let btnY = barY + 4;
-  let btnW = 70;
-  let btnH = TASKBAR_HEIGHT - 8;
+    let btnX = 36;
+    let btnY = barY + 4;
+    let btnW = 68;
+    let btnH = TASKBAR_HEIGHT - 8;
 
   if (
     state === "DESKTOP" ||
