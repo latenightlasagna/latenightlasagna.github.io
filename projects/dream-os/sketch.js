@@ -2072,8 +2072,8 @@ function drawBootSequence() {
     pg.textFont("monospace");
     pg.textSize(14);
 
-    let x = 20;
-    let y = 20;
+    let x = 48;
+    let y = 28;
 
     if (elapsed > 100) {
       pg.fill(50, 50, 255);
