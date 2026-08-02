@@ -86,30 +86,42 @@
         #webgl-container { width: 100%; height: 100%; }
         #webgl-container canvas { display: block; width: 100%; height: 100%; }
 
-        /* --- Interactive About Section --- */
+        /* --- Lightweight Editorial About Me Placeholder --- */
         #about-section {
             position: relative;
             width: 100%;
-            height: 100vh; 
+            min-height: 70vh; 
             background-color: #f4f4f4; 
             display: flex;
             align-items: center;
-            justify-content: flex-end; 
-            padding: 0 10vw;
+            justify-content: center; 
+            padding: 15vh 10vw;
             box-sizing: border-box;
-            overflow: hidden;
             z-index: 5;
-            cursor: none !important; 
+            border-top: 1px solid #e0e0e0;
         }
-        
-        #about-section * { cursor: none !important; }
 
-        #ragdoll-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        .about-content { 
+            position: relative; 
+            z-index: 2; 
+            max-width: 680px; 
+            text-align: center; 
+        }
 
-        .about-content { position: relative; z-index: 2; max-width: 400px; pointer-events: none; }
-        .about-content h2 { font-size: 3rem; font-weight: 500; text-transform: uppercase; letter-spacing: -1px; margin: 0 0 20px 0; pointer-events: auto; }
-        .about-text-box p { font-size: 16px; line-height: 1.6; color: #333; pointer-events: auto; margin-bottom: 20px; }
-        .about-text-box .instruction { margin-top: 10px; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #0000ff; border: 1px solid #0000ff; display: inline-block; padding: 8px 12px; border-radius: 20px; }
+        .about-content h2 { 
+            font-size: 3rem; 
+            font-weight: 500; 
+            text-transform: uppercase; 
+            letter-spacing: -1px; 
+            margin: 0 0 2rem 0; 
+        }
+
+        .about-text-box p { 
+            font-size: 1.35rem; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+        }
 
         /* --- DreamOS Showcase Section (Teal #008080 Theme) --- */
         .os-section {
@@ -213,14 +225,13 @@
         /* --- Mobile Optimization --- */
         @media (max-width: 768px) {
             .custom-cursor { display: none; }
-            #about-section, #about-section * { cursor: auto !important; }
             .top-nav { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
             .nav-col { gap: 20px; justify-content: center !important; }
             .sync-grid { width: 100%; display: flex; justify-content: space-around; }
             .sync-col-left, .sync-col-right { padding: 0; align-items: center; text-align: center; }
-            #about-section { justify-content: center; padding: 0 5vw; }
-            .about-content { text-align: center; margin-top: 40vh; }
-            .about-content h2 { text-align: center; }
+            #about-section { padding: 10vh 5vw; min-height: 50vh; }
+            .about-content h2 { font-size: 2rem; }
+            .about-text-box p { font-size: 1.1rem; }
             .os-header { flex-direction: column; align-items: flex-start; gap: 20px; }
             .os-title-area h2 { font-size: 2rem; }
             .video-grid { grid-template-columns: 1fr; }
@@ -252,15 +263,16 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- CLEAN ABOUT ME PLACEHOLDER SECTION         -->
+    <!-- ========================================== -->
     <section id="about-section">
         <div class="about-content">
             <h2>ABOUT ME</h2>
             <div class="about-text-box">
                 <p>I'm Simon, a Media Design student specializing in creating unexpected digital experiences. Drop me anywhere, and I'll figure it out.</p>
-                <p class="instruction">TAP TO POKE ME.</p>
             </div>
         </div>
-        <canvas id="ragdoll-canvas"></canvas>
     </section>
 
     <!-- ========================================== -->
@@ -335,8 +347,6 @@
     <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.19/bundled/lenis.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
 
     <script>
         const letters = "ABCDEFGHJKLNPRSTVXYZ0123456789#&*";
@@ -370,8 +380,8 @@
     </script>
 
     <script>
+        // --- 0. CUSTOM CURSOR ENGINE ---
         const cursor = document.getElementById('custom-cursor');
-        const aboutSectionElement = document.getElementById('about-section');
         let mouseX = window.innerWidth / 2;
         let mouseY = window.innerHeight / 2;
         let targetCursorScale = 1;
@@ -381,12 +391,8 @@
             mouseX = e.clientX;
             mouseY = e.clientY;
         });
-        
-        aboutSectionElement.addEventListener('mousedown', () => targetCursorScale = 0.5);
-        window.addEventListener('mouseup', () => targetCursorScale = 1);
-        aboutSectionElement.addEventListener('mouseenter', () => cursor.classList.add('visible'));
-        aboutSectionElement.addEventListener('mouseleave', () => cursor.classList.remove('visible'));
 
+        // --- 1. HERO THREE.JS PARTICLES SETUP ---
         const container = document.getElementById('webgl-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
@@ -426,139 +432,6 @@
             sprites.push(sprite);
         }
 
-        let world, torsoBody, sceneRagdoll, cameraRagdoll, rendererRagdoll;
-        let ragdollGroup, mixBones = {}; 
-        const aboutCanvas = document.getElementById('ragdoll-canvas');
-        
-        const isDesktop = window.matchMedia("(pointer: fine)").matches; 
-        let isDragging = false;
-        let dragPlane = new THREE.Plane();
-        let dragIntersection = new THREE.Vector3();
-        let raycaster = new THREE.Raycaster();
-        let mouse = new THREE.Vector2();
-
-        const instructionText = document.querySelector('.about-text-box .instruction');
-        if (instructionText) {
-            instructionText.innerText = isDesktop ? "DRAG TO THROW ME AROUND." : "TAP TO POKE ME.";
-        }
-        
-        try {
-            sceneRagdoll = new THREE.Scene();
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            sceneRagdoll.add(ambientLight);
-
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(5, 10, 5);
-            dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 1024;
-            dirLight.shadow.mapSize.height = 1024;
-            sceneRagdoll.add(dirLight);
-
-            cameraRagdoll = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-            cameraRagdoll.position.set(0, 3, 10);
-
-            rendererRagdoll = new THREE.WebGLRenderer({ canvas: aboutCanvas, alpha: true, antialias: true });
-            rendererRagdoll.setSize(window.innerWidth, window.innerHeight);
-            rendererRagdoll.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            rendererRagdoll.shadowMap.enabled = true;
-            rendererRagdoll.shadowMap.type = THREE.PCFSoftShadowMap;
-
-            const floorGeometry = new THREE.PlaneGeometry(2000, 2000);
-            const floorMaterial = new THREE.ShadowMaterial({ opacity: 0.25 }); 
-            const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
-            floorMesh.rotation.x = -Math.PI / 2;
-            floorMesh.receiveShadow = true;
-            sceneRagdoll.add(floorMesh);
-
-            world = new CANNON.World();
-            world.gravity.set(0, -25, 0); 
-            world.broadphase = new CANNON.NaiveBroadphase();
-            world.solver.iterations = 10; 
-
-            const floorBody = new CANNON.Body({ mass: 0 }); 
-            floorBody.addShape(new CANNON.Plane());
-            floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-            world.addBody(floorBody);
-
-            const torsoShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.8, 0.5)); 
-            torsoBody = new CANNON.Body({
-                mass: 5,
-                position: new CANNON.Vec3(-2, 8, 0), 
-                linearDamping: 0.05,
-                angularDamping: 0.05 
-            });
-            torsoBody.addShape(torsoShape);
-            world.addBody(torsoBody);
-
-            ragdollGroup = new THREE.Group();
-            sceneRagdoll.add(ragdollGroup);
-
-            const hitGeo = new THREE.BoxGeometry(2.5, 3.5, 2.5); 
-            const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-            const hitboxMesh = new THREE.Mesh(hitGeo, hitMat);
-            hitboxMesh.name = "dragHitbox";
-            ragdollGroup.add(hitboxMesh);
-
-            const loader = new THREE.GLTFLoader();
-            loader.load('./assets/simon-ps1.glb', (gltf) => {
-                const characterRoot = gltf.scene;
-                characterRoot.position.set(0, -0.8, 0); 
-                characterRoot.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                        if (child.material.map) {
-                            child.material.map.magFilter = THREE.NearestFilter;
-                            child.material.map.minFilter = THREE.NearestFilter;
-                        }
-                    }
-                    if (child.isBone) { mixBones[child.name] = child; }
-                });
-                ragdollGroup.add(characterRoot);
-            });
-
-            window.addEventListener('pointerdown', (e) => {
-                const rect = aboutCanvas.getBoundingClientRect();
-                if (rect.top < window.innerHeight && rect.bottom > 0 && torsoBody) {
-                    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-                    
-                    raycaster.setFromCamera(mouse, cameraRagdoll);
-                    const intersects = raycaster.intersectObjects(ragdollGroup.children, true);
-                    
-                    if (intersects.length > 0) {
-                        if (isDesktop) {
-                            isDragging = true;
-                            torsoBody.wakeUp();
-                            dragPlane.setFromNormalAndCoplanarPoint(
-                                cameraRagdoll.getWorldDirection(new THREE.Vector3()),
-                                ragdollGroup.position
-                            );
-                            raycaster.ray.intersectPlane(dragPlane, dragIntersection);
-                        } else {
-                            const randomX = (Math.random() - 0.5) * 40;
-                            const randomZ = (Math.random() - 0.5) * 40;
-                            torsoBody.applyImpulse(new CANNON.Vec3(randomX, 60, randomZ), torsoBody.position);
-                        }
-                    }
-                }
-            });
-
-            window.addEventListener('pointermove', (e) => {
-                if (!isDragging || !isDesktop) return;
-                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-                
-                raycaster.setFromCamera(mouse, cameraRagdoll);
-                if(raycaster.ray.intersectPlane(dragPlane, dragIntersection)) {
-                    torsoBody.wakeUp();
-                }
-            });
-
-            window.addEventListener('pointerup', () => { isDragging = false; });
-            
-        } catch (error) { console.error("Ragdoll setup failed", error); }
-
         // ==========================================
         // VIEWPORT VISIBILITY & AUDIO FADE ENGINE
         // ==========================================
@@ -596,18 +469,11 @@
             trackballDummy.aspect = window.innerWidth / window.innerHeight;
             trackballDummy.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-
-            if (cameraRagdoll && rendererRagdoll) {
-                cameraRagdoll.aspect = window.innerWidth / window.innerHeight;
-                cameraRagdoll.updateProjectionMatrix();
-                rendererRagdoll.setSize(window.innerWidth, window.innerHeight);
-            }
         });
 
         const scrollTrack = document.querySelector('.hero-scroll-track');
         const targetSection = document.getElementById('about-section'); 
         let snapMemory = false; 
-        const timeStep = 1 / 60;
 
         function animate(time) {
             requestAnimationFrame(animate);
@@ -645,110 +511,6 @@
                 camera.position.copy(trackballDummy.position).add(forwardVector.multiplyScalar(scrollProgress * 150));
 
                 renderer.render(scene, camera);
-            } catch (error) {}
-
-            try {
-                if (world && rendererRagdoll) {
-                    const aboutRect = aboutCanvas.getBoundingClientRect();
-                    if (aboutRect.top < window.innerHeight && aboutRect.bottom > 0) {
-                        
-                        const fovRad = (cameraRagdoll.fov / 2) * (Math.PI / 180);
-                        const visibleY = Math.tan(fovRad) * Math.abs(cameraRagdoll.position.z);
-                        const visibleX = visibleY * cameraRagdoll.aspect;
-
-                        if (
-                            torsoBody.position.y < -5 || 
-                            Math.abs(torsoBody.position.x) > visibleX + 4 || 
-                            torsoBody.position.z < -30 || 
-                            torsoBody.position.z > cameraRagdoll.position.z + 5
-                        ) {
-                            torsoBody.position.set(-2, visibleY + 5, 0);
-                            torsoBody.velocity.set(0, -5, 0);
-                            torsoBody.angularVelocity.set((Math.random()-0.5)*10, (Math.random()-0.5)*10, (Math.random()-0.5)*10);
-                            torsoBody.wakeUp();
-                            isDragging = false; 
-                        }
-
-                        if (isDragging && torsoBody) {
-                            const pullForce = new CANNON.Vec3(
-                                dragIntersection.x - torsoBody.position.x,
-                                dragIntersection.y - torsoBody.position.y,
-                                dragIntersection.z - torsoBody.position.z
-                            );
-                            torsoBody.velocity.set(pullForce.x * 12, pullForce.y * 12, pullForce.z * 12);
-                        }
-
-                        world.step(timeStep);
-                        
-                        if (ragdollGroup && torsoBody) {
-                            ragdollGroup.position.copy(torsoBody.position);
-                            ragdollGroup.quaternion.copy(torsoBody.quaternion);
-
-                            const vel = torsoBody.velocity;
-                            const speed = vel.length();
-                            const flop = 0.18; 
-
-                            if (speed > 0.1) {
-                                const dragX = vel.x * 0.1;
-                                const dragY = vel.y * 0.15;
-                                const dragZ = vel.z * 0.1;
-
-                                if (mixBones.mixamorigLeftArm) {
-                                    mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2 + Math.min(1.5, dragY), flop);
-                                    mixBones.mixamorigLeftArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.x, dragZ, flop);
-                                }
-                                if (mixBones.mixamorigLeftForeArm) { 
-                                    mixBones.mixamorigLeftForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftForeArm.rotation.z, Math.max(0, dragY * 1.5), flop);
-                                }
-                                
-                                if (mixBones.mixamorigRightArm) {
-                                    mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2 - Math.min(1.5, dragY), flop);
-                                    mixBones.mixamorigRightArm.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.x, dragZ, flop);
-                                }
-                                if (mixBones.mixamorigRightForeArm) { 
-                                    mixBones.mixamorigRightForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightForeArm.rotation.z, Math.min(0, -dragY * 1.5), flop);
-                                }
-
-                                if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, Math.max(-1.5, dragZ), flop);
-                                if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, Math.max(-1.5, dragZ), flop);
-                                
-                                if (mixBones.mixamorigLeftLeg) mixBones.mixamorigLeftLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftLeg.rotation.x, Math.max(0, dragY * 2), flop);
-                                if (mixBones.mixamorigRightLeg) mixBones.mixamorigRightLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightLeg.rotation.x, Math.max(0, dragY * 2), flop);
-
-                                if (mixBones.mixamorigSpine) {
-                                    mixBones.mixamorigSpine.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.x, dragZ, flop);
-                                    mixBones.mixamorigSpine.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigSpine.rotation.z, -dragX, flop);
-                                }
-                                if (mixBones.mixamorigSpine1) mixBones.mixamorigSpine1.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine1.rotation.x, dragZ * 1.2, flop);
-                                if (mixBones.mixamorigSpine2) mixBones.mixamorigSpine2.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigSpine2.rotation.x, dragZ * 1.5, flop);
-                                
-                                if (mixBones.mixamorigNeck) mixBones.mixamorigNeck.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigNeck.rotation.x, torsoBody.angularVelocity.x * 0.3, flop);
-                                if (mixBones.mixamorigHead) {
-                                    mixBones.mixamorigHead.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.x, torsoBody.angularVelocity.x * 0.4, flop);
-                                    mixBones.mixamorigHead.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigHead.rotation.z, torsoBody.angularVelocity.z * 0.4, flop);
-                                }
-
-                            } else {
-                                if (mixBones.mixamorigLeftArm) mixBones.mixamorigLeftArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftArm.rotation.z, -1.2, 0.05);
-                                if (mixBones.mixamorigRightArm) mixBones.mixamorigRightArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightArm.rotation.z, 1.2, 0.05);
-                                if (mixBones.mixamorigLeftForeArm) mixBones.mixamorigLeftForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigLeftForeArm.rotation.z, 0, 0.05);
-                                if (mixBones.mixamorigRightForeArm) mixBones.mixamorigRightForeArm.rotation.z = THREE.MathUtils.lerp(mixBones.mixamorigRightForeArm.rotation.z, 0, 0.05);
-                                
-                                if (mixBones.mixamorigLeftUpLeg) mixBones.mixamorigLeftUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftUpLeg.rotation.x, 0, 0.05);
-                                if (mixBones.mixamorigRightUpLeg) mixBones.mixamorigRightUpLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightUpLeg.rotation.x, 0, 0.05);
-                                if (mixBones.mixamorigLeftLeg) mixBones.mixamorigLeftLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigLeftLeg.rotation.x, 0, 0.05);
-                                if (mixBones.mixamorigRightLeg) mixBones.mixamorigRightLeg.rotation.x = THREE.MathUtils.lerp(mixBones.mixamorigRightLeg.rotation.x, 0, 0.05);
-                                
-                                if (mixBones.mixamorigSpine) mixBones.mixamorigSpine.rotation.set(0,0,0);
-                                if (mixBones.mixamorigSpine1) mixBones.mixamorigSpine1.rotation.set(0,0,0);
-                                if (mixBones.mixamorigSpine2) mixBones.mixamorigSpine2.rotation.set(0,0,0);
-                                if (mixBones.mixamorigNeck) mixBones.mixamorigNeck.rotation.set(0,0,0);
-                                if (mixBones.mixamorigHead) mixBones.mixamorigHead.rotation.set(0,0,0);
-                            }
-                        }
-                        rendererRagdoll.render(sceneRagdoll, cameraRagdoll);
-                    }
-                }
             } catch (error) {}
         }
 
